@@ -1,6 +1,11 @@
 LIBNAME	= usbstack
 APPNAME = main
 
+# Package definitions
+PKG_NAME	= target
+DATE		= $$(date +%Y%m%d)
+
+# Tool definitions
 CC      = arm-elf-gcc
 LD      = arm-elf-ld -v
 AR      = arm-elf-ar
@@ -8,6 +13,7 @@ AS      = arm-elf-as
 CP      = arm-elf-objcopy
 OD		= arm-elf-objdump
 RM		= rm
+TAR		= tar
 
 CFLAGS  = -I./ -c -W -Wall -Os -g -DDEBUG -mcpu=arm7tdmi
 ASFLAGS = -ahls -mapcs-32 -o crt.o
@@ -43,6 +49,10 @@ crt.o: crt.s
 	@ echo ".assembling"
 	$(CC) -c $(AFLAGS) -Wa,-ahlms=crt.lst crt.s -o crt.o
 	
+# Builds release tar file
+dist: clean
+	cd .. && $(TAR) --exclude={CVS,cvs} -cvzf $(PKG_NAME)-$(DATE).tar.gz $(PKG_NAME)
+
 # recompile if the makefile changes
 $(OBJS): makefile
 
