@@ -18,7 +18,15 @@
 */
 
 /*
-	Standard request handler
+	Standard request handler.
+	
+	This modules handles the 'chapter 9' processing, specifically the
+	standard device requests in table 9-3 from the universal serial bus
+	specification revision 2.0
+	
+	Specific types of devices may specify additional requests (for example
+	HID devices add a GET_DESCRIPTOR request for interfaces), but they
+	will not be part of this module.
 */
 
 #include "type.h"
@@ -82,10 +90,11 @@ static BOOL HandleStdDeviceReq(TSetupPacket *pSetup, int *piLen, U8 **ppbData)
 	case REQ_CLEAR_FEATURE:
 	case REQ_SET_FEATURE:
 	case REQ_SET_DESCRIPTOR:
+		DBG("Device req %d not implemented\n", pSetup->bRequest);
+		return FALSE;
 
 	default:
-		// unknown request
-		DBG("Device req %d not implemented\n", pSetup->bRequest);
+		DBG("Illegal device req %d\n", pSetup->bRequest);
 		return FALSE;
 	}
 	
@@ -117,21 +126,16 @@ static BOOL HandleStdInterfaceReq(TSetupPacket	*pSetup, int *piLen, U8 **ppbData
 		*piLen = 2;
 		break;
 
-	case REQ_GET_DESCRIPTOR:
-		DBG("D%x", pSetup->wValue);
-		if (pfnGetDescriptor == NULL) {
-			return FALSE;
-		}
-		return pfnGetDescriptor(pSetup->wValue, pSetup->wIndex, piLen, ppbData);
-
 	case REQ_CLEAR_FEATURE:
 	case REQ_SET_FEATURE:
 	
 	case REQ_GET_INTERFACE:
 	case REQ_SET_INTERFACE:
+		DBG("Interface req %d not implemented\n", pSetup->bRequest);
+		return FALSE;
 
 	default:
-		DBG("Interface req %d not implemented\n", pSetup->bRequest);
+		DBG("Illegal interface req %d\n", pSetup->bRequest);
 		return FALSE;
 	}
 
@@ -172,10 +176,12 @@ static BOOL HandleStdEndPointReq(TSetupPacket	*pSetup, int *piLen, U8 **ppbData)
 		break;
 	
 	case REQ_SET_FEATURE:
-		
-	default:
-		// unsupported request
+	case REQ_SYNCH_FRAME:
 		DBG("EP req %d not implemented\n", pSetup->bRequest);
+		return FALSE;
+
+	default:
+		DBG("Illegal EP req %d\n", pSetup->bRequest);
 		return FALSE;
 	}
 	
