@@ -26,7 +26,7 @@
 // local data
 
 static TFnDevIntHandler *_pfnDevIntHandler;
-static TFnEPIntHandler	*_apfnEPIntHandlers[32];
+static TFnEPIntHandler	*_apfnEPIntHandlers[16];
 
 // convert from endpoint address to endpoint index (and vice versa)
 #define EP2IDX(bEP)	((((bEP)&0xF)<<1)|(((bEP)&0x80)>>7))
@@ -150,7 +150,7 @@ void USBHwRegisterEPIntHandler(U8 bEP, U16 wMaxPacketSize, TFnEPIntHandler *pfnH
 	ASSERT(idx<32);
 
 	/* add handler to list of EP handlers */
-	_apfnEPIntHandlers[idx] = pfnHandler;
+	_apfnEPIntHandlers[idx / 2] = pfnHandler;
 	
 	/* enable EP interrupt*/
 	USBEpIntEn |= (1 << idx);
@@ -422,8 +422,8 @@ void USBHwISR(void)
 						((bEPStat & EPSTAT_EPN) ? EP_STATUS_NACKED : 0) |
 						((bEPStat & EPSTAT_PO) ? EP_STATUS_ERROR : 0);
 				// call handler
-				if (_apfnEPIntHandlers[i] != NULL) {
-					_apfnEPIntHandlers[i](IDX2EP(i), bStat);
+				if (_apfnEPIntHandlers[i / 2] != NULL) {
+					_apfnEPIntHandlers[i / 2](IDX2EP(i), bStat);
 				}
 				// clear int
 				USBEpIntClr = dwIntBit;
