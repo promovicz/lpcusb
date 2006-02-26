@@ -42,12 +42,10 @@ void USBHwConfigDevice	(BOOL fConfigured);
 BOOL USBHwEPRead		(U8 bEP, U8 *pbBuf, int *piLen);
 BOOL USBHwEPWrite		(U8 bEP, U8 *pbBuf, int iLen);
 void USBHwEPStall		(U8 bEP, BOOL fStall);
-void USBHwEPRealize		(U8 bEP, U32 dwMaxPSize);
-void USBHwEPEnable		(U8 bEP, BOOL fEnable);
 
 // register a callback for endpoint events
 typedef void (TFnEPIntHandler)	(U8 bEP, U8 bEPStatus);
-void USBHwRegisterEPIntHandler	(U8 bEP, TFnEPIntHandler *pfnHandler);
+void USBHwRegisterEPIntHandler	(U8 bEP, U16 wMaxPacketSize, TFnEPIntHandler *pfnHandler);
 
 // register a callback for device status events
 typedef void (TFnDevIntHandler)	(U8 bDevStatus);

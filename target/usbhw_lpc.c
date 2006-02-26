@@ -110,15 +110,38 @@ static U8 USBHwCmdRead(U8 bCmd)
 
 
 /*************************************************************************
+	USBHwEPRealize
+	==============
+		'Realizes' an endpoint, meaning that buffer space is reserved for
+		it. An endpoint needs to be realised before it can be used.
+		
+	From experiments, it appears that a USB reset causes USBReEP to
+	re-initialise to 3 (= just the control endpoints).
+	However, a USB bus reset does not disturb the USBMaxPSize settings.
+		
+	IN		bEP		Endpoint number
+
+**************************************************************************/
+static void USBHwEPRealize(int idx, U16 wMaxPSize)
+{
+	USBReEP |= (1 << idx);
+	USBEpInd = idx;
+	USBMaxPSize = wMaxPSize;
+	Wait4DevInt(EP_RLZED);
+}
+
+
+/*************************************************************************
 	USBHwRegisterEPIntHandler
 	=========================
 		Registers an endpoint event callback
 		
-	IN		bEP			Endpoint number
-			pfnHandler	Callback function
+	IN		bEP				Endpoint number
+			wMaxPacketSize	Maximum packet size for this endpoint
+			pfnHandler		Callback function
 
 **************************************************************************/
-void USBHwRegisterEPIntHandler(U8 bEP, TFnEPIntHandler *pfnHandler)
+void USBHwRegisterEPIntHandler(U8 bEP, U16 wMaxPacketSize, TFnEPIntHandler *pfnHandler)
 {
 	int idx;
 	
@@ -133,6 +156,9 @@ void USBHwRegisterEPIntHandler(U8 bEP, TFnEPIntHandler *pfnHandler)
 	USBEpIntEn |= (1 << idx);
 	USBDevIntEn |= EP_SLOW;
 	
+	// realise endpoint
+	USBHwEPRealize(idx, wMaxPacketSize);
+
 	DBG("Registered handler for EP 0x%x\n", bEP);
 }
 
@@ -154,33 +180,6 @@ void USBHwRegisterDevIntHandler(TFnDevIntHandler *pfnHandler)
 	USBDevIntEn |= DEV_STAT;
 
 	DBG("Registered handler for device status\n");
-}
-
-
-/*************************************************************************
-	USBHwConfigDevice
-	=================
-		Sets the 'configured' state
-		
-	IN		fConfigure	If TRUE, configure device, else unconfigure
-
-**************************************************************************/
-void USBHwConfigDevice(BOOL fConfigured)
-{
-	int i;
-	U8 bEP;
-
-	// realise and enable all installed endpoints
-	for (i = 0; i < 32; i++) {
-		bEP = IDX2EP(i);
-		if (_apfnEPIntHandlers[i] != NULL) {
-			USBHwEPRealize(bEP, MAX_PACKET_SIZE);
-			USBHwEPEnable(bEP, TRUE);
-		}
-	}
-
-	// set configured bit
-	USBHwCmdWrite(CMD_DEV_CONFIG, fConfigured ? CONF_DEVICE : 0);
 }
 
 
@@ -210,31 +209,6 @@ void USBHwConnect(BOOL fConnect)
 
 
 /*************************************************************************
-	USBHwEPRealize
-	==============
-		'Realizes' an endpoint, meaning that buffer space is reserved for
-		it. An endpoint needs to be realised before it can be used.
-		
-	From experiments, it appears that any realisation of endpoints is
-	reset to just the control endpoints on a USB reset.
-		
-	IN		bEP		Endpoint number
-
-**************************************************************************/
-void USBHwEPRealize(U8 bEP, U32 dwMaxPSize)
-{
-	int idx;
-	
-	idx = EP2IDX(bEP);
-	
-	USBReEP |= (1 << idx);
-	USBEpInd = idx;
-	USBMaxPSize = dwMaxPSize;
-	Wait4DevInt(EP_RLZED);
-}
-
-
-/*************************************************************************
 	USBHwEPStall
 	============
 		Sets the stalled property of an endpoint
@@ -260,10 +234,8 @@ void USBHwEPStall(U8 bEP, BOOL fStall)
 			fEnable	TRUE to enable, FALSE to disable
 
 **************************************************************************/
-void USBHwEPEnable(U8 bEP, BOOL fEnable)
+static void USBHwEPEnable(int idx, BOOL fEnable)
 {
-	int idx = EP2IDX(bEP);
-
 	USBHwCmdWrite(CMD_EP_SET_STATUS | idx, fEnable ? 0 : EP_DA);
 }
 
@@ -364,6 +336,36 @@ BOOL USBHwEPRead(U8 bEP, U8 *pbBuf, int *piLen)
 //	DBG(">");
 
 	return TRUE;
+}
+
+
+/*************************************************************************
+	USBHwConfigDevice
+	=================
+		Sets the 'configured' state.
+		
+	All registered endpoints are 'realised' and enabled, and the
+	'configured' bit is set in the device status register.
+		
+	IN		fConfigure	If TRUE, configure device, else unconfigure
+
+**************************************************************************/
+void USBHwConfigDevice(BOOL fConfigured)
+{
+	int i;
+
+	// realise endpoints (copied from enabled interrupts)
+	USBReEP = USBEpIntEn;
+
+	// enable all installed endpoints
+	for (i = 0; i < 32; i++) {
+		if (USBEpIntEn & (1 << i)) {
+			USBHwEPEnable(i, TRUE);
+		}
+	}
+
+	// set configured bit
+	USBHwCmdWrite(CMD_DEV_CONFIG, fConfigured ? CONF_DEVICE : 0);
 }
 
 
@@ -481,12 +483,12 @@ BOOL USBHwInit(void)
 	USBEpIntClr = 0xFFFFFFFF;
 
 	// setup control endpoints
-	USBHwEPRealize(0x00, MAX_PACKET_SIZE0);
-	USBHwEPRealize(0x80, MAX_PACKET_SIZE0);
+	USBHwEPRealize(0, MAX_PACKET_SIZE0);
+	USBHwEPRealize(1, MAX_PACKET_SIZE0);
 
 	// enable/clear control endpoints
-	USBHwEPEnable(0x00, TRUE);
-	USBHwEPEnable(0x80, TRUE);
+	USBHwEPEnable(0, TRUE);
+	USBHwEPEnable(1, TRUE);
 
 	return TRUE;
 }
