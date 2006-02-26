@@ -132,6 +132,21 @@ static void USBHwEPRealize(int idx, U16 wMaxPSize)
 
 
 /*************************************************************************
+	USBHwEPEnable
+	=============
+		Enables or disables an endpoint
+		
+	IN		bEP		Endpoint number
+			fEnable	TRUE to enable, FALSE to disable
+
+**************************************************************************/
+static void USBHwEPEnable(int idx, BOOL fEnable)
+{
+	USBHwCmdWrite(CMD_EP_SET_STATUS | idx, fEnable ? 0 : EP_DA);
+}
+
+
+/*************************************************************************
 	USBHwRegisterEPIntHandler
 	=========================
 		Registers an endpoint event callback
@@ -222,21 +237,6 @@ void USBHwEPStall(U8 bEP, BOOL fStall)
 	int idx = EP2IDX(bEP);
 
 	USBHwCmdWrite(CMD_EP_SET_STATUS | idx, fStall ? EP_ST : 0);
-}
-
-
-/*************************************************************************
-	USBHwEPEnable
-	=============
-		Enables or disables an endpoint
-		
-	IN		bEP		Endpoint number
-			fEnable	TRUE to enable, FALSE to disable
-
-**************************************************************************/
-static void USBHwEPEnable(int idx, BOOL fEnable)
-{
-	USBHwCmdWrite(CMD_EP_SET_STATUS | idx, fEnable ? 0 : EP_DA);
 }
 
 
