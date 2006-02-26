@@ -133,77 +133,75 @@ static void DataIn(void)
 
 
 /*************************************************************************
-	USBHandleControlTransferOut
-	===========================
-		Handles OUT transfers on EP0
+	USBHandleControlTransfer
+	========================
+		Handles IN/OUT transfers on EP0
 
 **************************************************************************/
-void USBHandleControlTransferOut(U8 bEP, U8 bEPStat)
+void USBHandleControlTransfer(U8 bEP, U8 bEPStat)
 {
 	int iChunk;
 
-	if (bEPStat & EP_STATUS_SETUP) {
-		// setup packet, reset request message state machine
-		USBHwEPRead(0x00, (U8 *)&Setup, &iLen);
-		DBG("S%x", Setup.bRequest);
+	if (bEP == 0x00) {
+		// OUT transfer
+		if (bEPStat & EP_STATUS_SETUP) {
+			// setup packet, reset request message state machine
+			USBHwEPRead(0x00, (U8 *)&Setup, &iLen);
+			DBG("S%x", Setup.bRequest);
 
-		// defaults for data pointer and residue
-		pbData = abControlData;
-		iResidue = Setup.wLength;
-		iLen = Setup.wLength;
+			// defaults for data pointer and residue
+			pbData = abControlData;
+			iResidue = Setup.wLength;
+			iLen = Setup.wLength;
 
-		if ((Setup.wLength == 0) ||
-			(REQTYPE_GET_DIR(Setup.bmRequestType) == REQTYPE_DIR_TO_HOST)) {
-			// ask installed handler to process request
-			if (!_HandleRequest(&Setup, &iLen, &pbData)) {
-				DBG("_HandleRequest1 failed\n");
-				StallControlPipe(bEPStat);
-				return;
-			}
-			// send smallest of requested and offered length
-			iResidue = MIN(iLen, Setup.wLength);
-			// send first part (possibly a zero-length status message)
-			DataIn();
-		}
-	}
-	else {		
-		if (iResidue > 0) {
-			// store data
-			iChunk = 0;
-			USBHwEPRead(0x00, pbData, &iChunk);
-			pbData += iChunk;
-			iResidue -= iChunk;
-			if (iResidue == 0) {
-				// received all, send data to handler
-				pbData = abControlData;
+			if ((Setup.wLength == 0) ||
+				(REQTYPE_GET_DIR(Setup.bmRequestType) == REQTYPE_DIR_TO_HOST)) {
+				// ask installed handler to process request
 				if (!_HandleRequest(&Setup, &iLen, &pbData)) {
+					DBG("_HandleRequest1 failed\n");
 					StallControlPipe(bEPStat);
-					DBG("_HandleRequest2 failed\n");
 					return;
 				}
-				// send status to host
+				// send smallest of requested and offered length
+				iResidue = MIN(iLen, Setup.wLength);
+				// send first part (possibly a zero-length status message)
 				DataIn();
 			}
 		}
-		else {
-			// absorb zero-length status message
-			USBHwEPRead(0x00, NULL, &iChunk);
-			DBG(iChunk > 0 ? "?" : "");
+		else {		
+			if (iResidue > 0) {
+				// store data
+				iChunk = 0;
+				USBHwEPRead(0x00, pbData, &iChunk);
+				pbData += iChunk;
+				iResidue -= iChunk;
+				if (iResidue == 0) {
+					// received all, send data to handler
+					pbData = abControlData;
+					if (!_HandleRequest(&Setup, &iLen, &pbData)) {
+						StallControlPipe(bEPStat);
+						DBG("_HandleRequest2 failed\n");
+						return;
+					}
+					// send status to host
+					DataIn();
+				}
+			}
+			else {
+				// absorb zero-length status message
+				USBHwEPRead(0x00, NULL, &iChunk);
+				DBG(iChunk > 0 ? "?" : "");
+			}
 		}
 	}
-}
-
-
-/*************************************************************************
-	USBHandleControlTransferIn
-	==========================
-		Handles IN transfers on EP0
-
-**************************************************************************/
-void USBHandleControlTransferIn(U8 bEP, U8 bEPStat)
-{
-	// send more data if available
-	DataIn();
+	else if (bEP == 0x80) {
+		// IN transfer
+		// send more data if available
+		DataIn();
+	}
+	else {
+		ASSERT(FALSE);
+	}
 }
 
 

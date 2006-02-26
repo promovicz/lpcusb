@@ -72,8 +72,6 @@ BOOL USBHandleStandardRequest(TSetupPacket *pSetup, int *piLen, U8 **ppbData);
 
 // default EP0 handler
 void USBHandleControlTransfer(U8 bEP, U8 bEPStat);
-void USBHandleControlTransferOut(U8 bEP, U8 bEPStat);
-void USBHandleControlTransferIn(U8 bEP, U8 bEPStat);
 
 // default descriptor handler
 void USBRegisterDescriptors(const U8 *pabDescriptors);
