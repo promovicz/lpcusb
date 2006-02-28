@@ -97,13 +97,12 @@ static const U8 abDescriptors[] = {
 // configuration
 	0x09,
 	DESC_CONFIGURATION,
-	0x22,  					// wTotalLength
-	0x00,					// bNumInterfaces
+	LE_WORD(0x22),  		// wTotalLength
+	0x01,  					// bNumInterfaces
 	0x01,  					// bConfigurationValue
-	0x01,  					// iConfiguration
-	0x00,  					// bmAttributes
-	0xA0,  					// bMaxPower
-	0x32,  
+	0x00,  					// iConfiguration
+	0x80,  					// bmAttributes
+	0x32,  					// bMaxPower
 
 // interface
 	0x09,   				
