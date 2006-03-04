@@ -14,11 +14,12 @@
 #define	PLL1STAT		*(volatile unsigned int *)0xE01FC0A8
 #define	PLL1FEED		*(volatile unsigned int *)0xE01FC0AC
 
-#define PINSEL1        (*((volatile unsigned long *) 0xE002C004))
-#define IOPIN0         (*((volatile unsigned long *) 0xE0028000))
-#define IOSET0         (*((volatile unsigned long *) 0xE0028004))
-#define IODIR0         (*((volatile unsigned long *) 0xE0028008))
-#define IOCLR0         (*((volatile unsigned long *) 0xE002800C))
+#define PINSEL0			*(volatile unsigned int *)0xE002C000
+#define PINSEL1			*(volatile unsigned int *)0xE002C004
+#define IOPIN0			*(volatile unsigned int *)0xE0028000
+#define IOSET0			*(volatile unsigned int *)0xE0028004
+#define IODIR0			*(volatile unsigned int *)0xE0028008
+#define IOCLR0			*(volatile unsigned int *)0xE002800C
 
 /* USB register definitions */
 #define USBIntSt		*(volatile unsigned int *)0xE01FC1C0
