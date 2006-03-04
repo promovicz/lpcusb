@@ -12,6 +12,7 @@
 #define U0RBR		*(volatile unsigned int *)0xE000C000
 #define U0DLL		*(volatile unsigned int *)0xE000C000
 #define U0DLM		*(volatile unsigned int *)0xE000C004
+#define U0FCR		*(volatile unsigned int *)0xE000C008
 #define U0LCR		*(volatile unsigned int *)0xE000C00C
 #define U0LSR		*(volatile unsigned int *)0xE000C014
 
@@ -24,6 +25,9 @@ void ConsoleInit(int iDivider)
 	U0DLL = iDivider & 0xFF;						/* set divider / baud rate */
 	U0DLM = iDivider >> 8;
 	U0LCR = 0x03;                          			/* DLAB = 0                          */
+	
+	// enable FIFO
+	U0FCR = 1;
 }
 
 
