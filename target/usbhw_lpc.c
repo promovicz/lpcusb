@@ -23,6 +23,21 @@
 #include "usbapi.h"
 
 
+#ifdef DEBUG
+// comment out the following line if you don't want to use debug LEDs
+#define DEBUG_LED
+#endif
+
+#ifdef DEBUG_LED
+#define DEBUG_LED_INIT(x)	PINSEL0 &= ~(0x3 << (2*x)); IODIR0 |= (1 << x);
+#define DEBUG_LED_ON(x)		IOCLR0 = (1 << x);
+#define DEBUG_LED_OFF(x)	IOSET0 = (1 << x);
+#else
+#define DEBUG_LED_INIT(x)
+#define DEBUG_LED_ON(x)
+#define DEBUG_LED_OFF(x)
+#endif
+
 // local data
 
 static TFnDevIntHandler *_pfnDevIntHandler;
@@ -392,6 +407,7 @@ void USBHwISR(void)
 
 	// handle device dwStatus interrupts
 	if (dwStatus & DEV_STAT) {
+DEBUG_LED_ON(8);		
 		bDevStat = USBHwCmdRead(CMD_DEV_STATUS);
 		if (bDevStat & (CON_CH | SUS_CH | RST)) {
 			// convert device status into something HW independent
@@ -404,11 +420,13 @@ void USBHwISR(void)
 			}
 		}
 		// clear DEV_STAT;
-		dwStatus &= ~DEV_STAT;
+		USBDevIntClr = DEV_STAT;
+DEBUG_LED_OFF(8);		
 	}
 	
 	// check endpoint interrupts
 	if (dwStatus & EP_SLOW) {
+DEBUG_LED_ON(9);		
 		dwEPIntStat = USBEpIntSt;
 		for (i = 0; i < 32; i++) {
 			dwIntBit = (1 << i);
@@ -430,11 +448,9 @@ void USBHwISR(void)
 			}
 		}
 		// clear EP_SLOW
-		dwStatus &= ~EP_SLOW;
+		USBDevIntClr = EP_SLOW;
+DEBUG_LED_OFF(9);
 	}
-	
-	// all relevant bits in dwStatus should be clear by now, if not clear them anyhow
-	USBDevIntClr = dwStatus;
 }
 
 
@@ -489,6 +505,10 @@ BOOL USBHwInit(void)
 	// enable/clear control endpoints
 	USBHwEPEnable(0, TRUE);
 	USBHwEPEnable(1, TRUE);
+	
+	// init debug leds
+	DEBUG_LED_INIT(8);
+	DEBUG_LED_INIT(9);
 
 	return TRUE;
 }
