@@ -40,8 +40,9 @@
 
 // local data
 
-static TFnDevIntHandler *_pfnDevIntHandler;
+static TFnDevIntHandler *_pfnDevIntHandler = NULL;
 static TFnEPIntHandler	*_apfnEPIntHandlers[16];
+static TFnFrameHandler	*_pfnFrameHandler = NULL;
 
 // convert from endpoint address to endpoint index (and vice versa)
 #define EP2IDX(bEP)	((((bEP)&0xF)<<1)|(((bEP)&0x80)>>7))
@@ -199,7 +200,6 @@ void USBHwRegisterEPIntHandler(U8 bEP, U16 wMaxPacketSize, TFnEPIntHandler *pfnH
 		Registers an device status callback
 		
 	IN		pfnHandler	Callback function
-			dwArg		Callback function argument
 
 **************************************************************************/
 void USBHwRegisterDevIntHandler(TFnDevIntHandler *pfnHandler)
@@ -210,6 +210,25 @@ void USBHwRegisterDevIntHandler(TFnDevIntHandler *pfnHandler)
 	USBDevIntEn |= DEV_STAT;
 
 	DBG("Registered handler for device status\n");
+}
+
+
+/*************************************************************************
+	USBHwRegisterFrameHandler
+	=========================
+		Registers the frame callback
+		
+	IN		pfnHandler	Callback function
+
+**************************************************************************/
+void USBHwRegisterFrameHandler(TFnFrameHandler *pfnHandler)
+{
+	_pfnFrameHandler = pfnHandler;
+	
+	// enable device interrupt
+	USBDevIntEn |= FRAME;
+
+	DBG("Registered handler for frame\n");
 }
 
 
@@ -451,6 +470,17 @@ DEBUG_LED_ON(9);
 		USBDevIntClr = EP_SLOW;
 DEBUG_LED_OFF(9);
 	}
+	
+	// handle frame interrupt
+	if (dwStatus & FRAME) {
+DEBUG_LED_ON(10);
+		if (_pfnFrameHandler != NULL) {
+			_pfnFrameHandler(0);	// implement counter later
+		}
+		// clear int
+		USBDevIntClr = FRAME;
+DEBUG_LED_OFF(10);
+	}
 }
 
 
@@ -509,6 +539,7 @@ BOOL USBHwInit(void)
 	// init debug leds
 	DEBUG_LED_INIT(8);
 	DEBUG_LED_INIT(9);
+	DEBUG_LED_INIT(10);
 
 	return TRUE;
 }
