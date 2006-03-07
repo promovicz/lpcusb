@@ -21,7 +21,7 @@ LFLAGS  =  -T lpc2148_flash.cmd -nostartfiles
 CPFLAGS = -O ihex
 ODFLAGS	= -x --syms
 
-OBJS =	crt.o startup.o printf.o console.o main.o 
+OBJS =	crt.o startup.o printf.o console.o main_hid.o
 
 LIBOBJS =	usbhw_lpc.o usbcontrol.o usbstdreq.o usbinit.o usbdescrip.o
 
@@ -54,5 +54,5 @@ dist: clean
 	cd .. && $(TAR) --exclude={CVS,cvs} -cvzf $(PKG_NAME)-$(DATE).tar.gz $(PKG_NAME)
 
 # recompile if the makefile changes
-$(OBJS): makefile
+$(OBJS) $(LIBOBJS): makefile
 
