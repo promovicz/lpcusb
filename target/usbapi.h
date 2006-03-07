@@ -11,7 +11,6 @@
 **************************************************************************/
 
 #define MAX_PACKET_SIZE0	64
-#define	MAX_PACKET_SIZE		64
 
 /*************************************************************************
 	USB hardware interface
@@ -50,6 +49,10 @@ void USBHwRegisterEPIntHandler	(U8 bEP, U16 wMaxPacketSize, TFnEPIntHandler *pfn
 // register a callback for device status events
 typedef void (TFnDevIntHandler)	(U8 bDevStatus);
 void USBHwRegisterDevIntHandler	(TFnDevIntHandler *pfnHandler);
+
+// register a callback for frame event
+typedef void (TFnFrameHandler)(U16 wFrame);
+void USBHwRegisterFrameHandler(TFnFrameHandler *pfnHandler);
 
 
 /*************************************************************************
