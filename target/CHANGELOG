@@ -1,3 +1,18 @@
+v20060307
+	20060307, bertrik
+	* Added frame interrupt handler
+	* Updated HID example. It is now possible to actually read something from the device using HidProbe.
+	* Makefile: main_hid is now the default target
+
+	20060303, bertrik
+	* updated clearing of interrupt bits
+	* added debug LEDs to show interrupt activity
+	* serial output now uses FIFO
+	
+	20060226, bertrik
+	* removed limitation of fixed packet size of 64 bytes.
+	* reduced number of stored EP interrupt handler pointers from 32 to 16
+
 v20060224
 	Initial release
 	
