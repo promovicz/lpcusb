@@ -31,6 +31,12 @@
 
 #define LE_WORD(x)		(x&0xFF),(x>>8)
 
+#define REPORT_SIZE			4
+
+static U8	abReport[] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07};
+static int	_iIdleRate = 0;
+static int	_iFrame = 0;
+
 
 
 // see the joystick example from the usb.org HID Descriptor Tool
@@ -86,8 +92,8 @@ static const U8 abDescriptors[] = {
 	0x00,              		// bDeviceSubClass
 	0x00,              		// bDeviceProtocol
 	MAX_PACKET_SIZE0,  		// bMaxPacketSize
-	LE_WORD(0x1234),		// idVendor
-	LE_WORD(0x8888),		// idProduct
+	LE_WORD(0xFFFF),		// idVendor
+	LE_WORD(0x0001),		// idProduct
 	LE_WORD(0x0100),		// bcdDevice
 	0x01,              		// iManufacturer
 	0x02,              		// iProduct
@@ -110,13 +116,12 @@ static const U8 abDescriptors[] = {
 	0x00,  		 			// bInterfaceNumber
 	0x00,   				// bAlternateSetting
 	0x01,   				// bNumEndPoints
-	0x03,   				// bInterfaceClass
+	0x03,   				// bInterfaceClass = HID
 	0x00,   				// bInterfaceSubClass
 	0x00,   				// bInterfaceProtocol
 	0x00,   				// iInterface
 
 // HID descriptor
-
 	0x09, 
 	0x21, 					// bDescriptorType = HID
 	LE_WORD(0x0110),		// bcdHID
@@ -126,10 +131,10 @@ static const U8 abDescriptors[] = {
 	LE_WORD(sizeof(abReportDesc)),
 
 	0x07,   		
-	0x05,   		
+	DESC_ENDPOINT,   		
 	INTR_IN_EP,				// bEndpointAddress
 	0x03,   				// bmAttributes = INT
-	LE_WORD(0x40),   		// wMaxPacketSize
+	LE_WORD(MAX_PACKET_SIZE),// wMaxPacketSize
 	10,						// bInterval   		
 
 // string descriptors
@@ -150,18 +155,11 @@ static const U8 abDescriptors[] = {
 	// serial number string
 	0x12,
 	DESC_STRING,
-	'D', 0, 'E', 0, 'A', 0, 'D', 0, 'C', 0, 'O', 0, 'D', 0, 'E', 0,
+	'D', 0, 'E', 0, 'A', 0, 'D', 0, 'C', 0, '0', 0, 'D', 0, 'E', 0,
 	
 	// terminator
 	0
 };
-
-
-
-static void IntrIn(U8 bEP, U8 bEPStatus)
-{
-	DBG("IN %x\n", bEPStatus);
-}
 
 
 /*************************************************************************
@@ -176,6 +174,8 @@ static BOOL HandleClassRequest(TSetupPacket *pSetup, int *piLen, U8 **ppbData)
 	
 	// set_idle:
 	case 0x0A:
+		DBG("SET IDLE, val=%X, idx=%X\n", pSetup->wValue, pSetup->wIndex);
+		_iIdleRate = (pSetup->wValue & 0xFF) * 4;
 		break;
 
 	default:
@@ -210,10 +210,6 @@ static BOOL HIDHandleStdReq(TSetupPacket *pSetup, int *piLen, U8 **ppbData)
 		bIndex = GET_DESC_INDEX(pSetup->wValue);
 		switch (bType) {
 
-		case 0x21:
-			// HID descriptor
-			break;
-
 		case 0x22:
 			// report
 			*ppbData = abReportDesc;
@@ -222,6 +218,7 @@ static BOOL HIDHandleStdReq(TSetupPacket *pSetup, int *piLen, U8 **ppbData)
 
 		default:
 			// unknown request
+			DBG("Unhandled HID req %X\n", bType);
 			return FALSE;
 		}
 		
@@ -230,6 +227,22 @@ static BOOL HIDHandleStdReq(TSetupPacket *pSetup, int *piLen, U8 **ppbData)
 	else {
 		// pass it on to the chapter 9 standard request handler
 		return USBHandleStandardRequest(pSetup, piLen, ppbData);
+	}
+}
+
+
+static void HandleFrame(U16 wFrame)
+{
+	static int iCount;
+
+	_iFrame++;
+	if ((_iFrame > 1000)) {
+		// send report (dummy data)
+		abReport[0] = (iCount >> 8) & 0xFF;
+		abReport[1] = (iCount) & 0xFF;
+		iCount++;
+		USBHwEPWrite(INTR_IN_EP, abReport, REPORT_SIZE);
+		_iFrame = 0;
 	}
 }
 
@@ -247,7 +260,7 @@ int main(void)
 	ConsoleInit(60000000 / (16 * BAUD_RATE));
 
 	DBG("Initialising USB stack\n");
-
+	
 	// initialise stack
 	USBInit();
 	
@@ -260,8 +273,11 @@ int main(void)
 	// register class request handler
 	USBRegisterRequestHandler(REQTYPE_TYPE_CLASS, HandleClassRequest);
 
-	// register endpoint handlers
-	USBHwRegisterEPIntHandler(INTR_IN_EP, MAX_PACKET_SIZE, IntrIn);
+	// register endpoint
+	USBHwRegisterEPIntHandler(INTR_IN_EP, MAX_PACKET_SIZE, NULL);
+
+	// register frame handler
+	USBHwRegisterFrameHandler(HandleFrame);
 
 	DBG("Starting USB communication\n");
 
