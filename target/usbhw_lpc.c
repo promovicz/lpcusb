@@ -29,9 +29,9 @@
 #endif
 
 #ifdef DEBUG_LED
-#define DEBUG_LED_INIT(x)	PINSEL0 &= ~(0x3 << (2*x)); IODIR0 |= (1 << x);
 #define DEBUG_LED_ON(x)		IOCLR0 = (1 << x);
 #define DEBUG_LED_OFF(x)	IOSET0 = (1 << x);
+#define DEBUG_LED_INIT(x)	PINSEL0 &= ~(0x3 << (2*x)); IODIR0 |= (1 << x); DEBUG_LED_OFF(x);
 #else
 #define DEBUG_LED_INIT(x)
 #define DEBUG_LED_ON(x)
