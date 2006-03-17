@@ -46,9 +46,9 @@ static const U8 abDescriptors[] = {
 	0x00,					// bDeviceClass
 	0x00,					// bDeviceSubClass
 	0x00,					// bDeviceProtocol
-	MAX_PACKET_SIZE,		// bMaxPacketSize
-	LE_WORD(0x1234),		// idVendor
-	LE_WORD(0xABCD),		// idProduct
+	MAX_PACKET_SIZE0,		// bMaxPacketSize
+	LE_WORD(0xFFFF),		// idVendor
+	LE_WORD(0x0003),		// idProduct
 	LE_WORD(0x0100),		// bcdDevice
 	0x01,					// iManufacturer
 	0x02,					// iProduct
@@ -72,8 +72,8 @@ static const U8 abDescriptors[] = {
 	0x00,					// bAlternateSetting
 	0x02,					// bNumEndPoints
 	0x08,					// bInterfaceClass
-	0x06,					// bInterfaceSubClass
-	0x50,					// bInterfaceProtocol
+	0x05,					// bInterfaceSubClass = 8070i ATAPI-over-USB
+	0x50,					// bInterfaceProtocol = BOT
 	0x00,					// iInterface
 // EP
 	0x07,
@@ -103,9 +103,9 @@ static const U8 abDescriptors[] = {
 	DESC_STRING,
 	'P', 0, 'r', 0, 'o', 0, 'd', 0, 'u', 0, 'c', 0, 't', 0, 'X', 0,
 
-	0x12,
+	0x1A,
 	DESC_STRING,
-	'D', 0, 'E', 0, 'A', 0, 'D', 0, 'C', 0, 'O', 0, 'D', 0, 'E', 0,
+	'D', 0, 'E', 0, 'A', 0, 'D', 0, 'C', 0, '0', 0, 'D', 0, 'E', 0, 'C', 0, 'A', 0, 'F', 0, 'E', 0,
 
 // terminating zero
 	0
@@ -133,12 +133,24 @@ static void BulkOut(U8 bEP, U8 bEPStatus)
 
 static BOOL HandleClassRequest(TSetupPacket *pSetup, int *piLen, U8 **ppbData)
 {
+	if (pSetup->wIndex != 0) {
+		DBG("Invalid idx %X\n", pSetup->wIndex);
+		return FALSE;
+	}
+	if (pSetup->wValue != 0) {
+		DBG("Invalid val %X\n", pSetup->wValue);
+		return FALSE;
+	}
+
 	switch (pSetup->bRequest) {
+	// get max LUN
 	case 0xFE:
 		*ppbData[0] = 0;		// No LUNs
 		*piLen = 1;
 		break;
+	// MSC reset
 	case 0xFF:
+		// MSC_Bot_Init();
 		break;
 	default:
 		DBG("Unhandled class\n");
@@ -168,7 +180,7 @@ int main(void)
 	// register descriptors
 	USBRegisterDescriptors(abDescriptors);
 
-	// register vendor class handler
+	// register class request handler
 	USBRegisterRequestHandler(REQTYPE_TYPE_CLASS, HandleClassRequest);
 	
 	// register endpoint handlers
