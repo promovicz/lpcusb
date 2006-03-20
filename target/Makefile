@@ -53,6 +53,6 @@ crt.o: crt.s
 dist: clean
 	cd .. && $(TAR) --exclude={CVS,cvs} -cvzf $(PKG_NAME)-$(DATE).tar.gz $(PKG_NAME)
 
-# recompile if the makefile changes
-$(OBJS) $(LIBOBJS): makefile
+# recompile if the Makefile changes
+$(OBJS) $(LIBOBJS): Makefile
 
