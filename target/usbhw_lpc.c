@@ -258,6 +258,23 @@ void USBHwConnect(BOOL fConnect)
 
 
 /*************************************************************************
+	USBHwGetEPStall
+	============
+		Gets the stalled property of an endpoint
+		
+	IN		bEP		Endpoint number
+			
+	Returns TRUE if stalled, FALSE if unstalled			
+**************************************************************************/
+BOOL USBHwGetEPStall(U8 bEP)
+{
+   	int idx = EP2IDX(bEP);
+
+	return (USBHwCmdRead(CMD_EP_SELECT | idx) & 2);
+}
+
+
+/*************************************************************************
 	USBHwEPStall
 	============
 		Sets the stalled property of an endpoint
@@ -410,7 +427,6 @@ void USBHwConfigDevice(BOOL fConfigured)
 		
 	Interrupt mapping:
 	* endpoint interrupts are mapped to the slow interrupt
-	* TODO: frame interrupts are mapped to the fast interrupt
 	
 	TODO: should we cause interrupt on NAK?
 

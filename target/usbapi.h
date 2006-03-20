@@ -41,6 +41,7 @@ void USBHwConfigDevice	(BOOL fConfigured);
 BOOL USBHwEPRead		(U8 bEP, U8 *pbBuf, int *piLen);
 BOOL USBHwEPWrite		(U8 bEP, U8 *pbBuf, int iLen);
 void USBHwEPStall		(U8 bEP, BOOL fStall);
+BOOL USBHwGetEPStall	(U8 bEP);
 
 // register a callback for endpoint events
 typedef void (TFnEPIntHandler)	(U8 bEP, U8 bEPStatus);
