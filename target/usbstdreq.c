@@ -29,6 +29,11 @@
 	will not be part of this module.
 */
 
+// TODO some requests have to return a request error if device not configured:
+// TODO GET_INTERFACE, GET_STATUS, SET_INTERFACE, SYNCH_FRAME
+// TODO this applies to the following if endpoint != 0:
+// TODO SET_FEATURE, GET_FEATURE 
+
 #include "type.h"
 #include "usbdebug.h"
 #include "usbstruct.h"
@@ -60,7 +65,7 @@ static BOOL HandleStdDeviceReq(TSetupPacket *pSetup, int *piLen, U8 **ppbData)
 	case REQ_GET_STATUS:
 		// bit 0: self-powered
 		// bit 1: remote wakeup
-		pbData[0] = 0;
+		pbData[0] = 0; 	// TODO use bmAttributes according to configuration
 		pbData[1] = 0;
 		*piLen = 2;
 		break;
@@ -83,12 +88,20 @@ static BOOL HandleStdDeviceReq(TSetupPacket *pSetup, int *piLen, U8 **ppbData)
 		break;
 
 	case REQ_SET_CONFIGURATION:
-		bConfiguration = pSetup->wValue;
-		USBHwConfigDevice(TRUE);
+		bConfiguration = pSetup->wValue & 0xFF;	// TODO use bConfigurationValue(s)
+		USBHwConfigDevice((pSetup->wValue & 0xFF) != 0);
 		break;
 
 	case REQ_CLEAR_FEATURE:
 	case REQ_SET_FEATURE:
+		if (pSetup->wValue == FEA_REMOTE_WAKEUP) {
+			// put DEVICE_REMOTE_WAKEUP code here
+		}
+		if (pSetup->wValue == FEA_TEST_MODE) {
+			// put TEST_MODE code here
+		}
+		return FALSE;
+
 	case REQ_SET_DESCRIPTOR:
 		DBG("Device req %d not implemented\n", pSetup->bRequest);
 		return FALSE;
@@ -128,11 +141,24 @@ static BOOL HandleStdInterfaceReq(TSetupPacket	*pSetup, int *piLen, U8 **ppbData
 
 	case REQ_CLEAR_FEATURE:
 	case REQ_SET_FEATURE:
-	
-	case REQ_GET_INTERFACE:
-	case REQ_SET_INTERFACE:
-		DBG("Interface req %d not implemented\n", pSetup->bRequest);
+		// not defined for interface
 		return FALSE;
+	
+	case REQ_GET_INTERFACE:	// TODO use bNumInterfaces
+        // there is only one interface, return n-1 (= 0)
+		pbData[0] = 0;
+		*piLen = 1;
+		break;
+	
+	case REQ_SET_INTERFACE:	// TODO use bNumInterfaces
+		// there is only one interface (= 0)
+		if (pSetup->wValue == 0) {
+			// ACK (zero packet) will be sent automatically
+		}
+		else {
+			return FALSE;
+		}
+		break;
 
 	default:
 		DBG("Illegal interface req %d\n", pSetup->bRequest);
@@ -161,21 +187,29 @@ static BOOL HandleStdEndPointReq(TSetupPacket	*pSetup, int *piLen, U8 **ppbData)
 	switch (pSetup->bRequest) {
 	case REQ_GET_STATUS:
 		// bit 0 = endpointed halted or not
-		pbData[0] = 0;
-		pbData[1] = 0;		// TODO
+		pbData[0] = USBHwGetEPStall(pSetup->wIndex);
+		pbData[1] = 0;
 		*piLen = 2;
 		break;
 		
 	case REQ_CLEAR_FEATURE:
-		if (pSetup->wValue != 0) {
-			// feature should be 0 for endpoints
-			return FALSE;
-		}
+		if (pSetup->wValue == FEA_ENDPOINT_HALT) {
 		// clear HALT by unstalling
 		USBHwEPStall(pSetup->wIndex, FALSE);
 		break;
+		}
+		// only ENDPOINT_HALT defined for endpoints
+		return FALSE;
 	
 	case REQ_SET_FEATURE:
+		if (pSetup->wValue == FEA_ENDPOINT_HALT) {
+			// set HALT by stalling
+			USBHwEPStall(pSetup->wIndex, TRUE);
+			break;
+		}
+		// only ENDPOINT_HALT defined for endpoints
+		return FALSE;
+
 	case REQ_SYNCH_FRAME:
 		DBG("EP req %d not implemented\n", pSetup->bRequest);
 		return FALSE;
