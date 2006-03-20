@@ -1,3 +1,9 @@
+	20060321, fixes/additions by Martin Mueller
+	* usbstdreq.c: fixes for passing the USBCV compliance tests
+	* usbhw_lpc.c/.h: added function to get stall property of endpoint
+	* usbstruct.h: added more USB definitions
+	* main_hid.c: updated to pass HID compliance tests
+
 v20060307
 	20060307, bertrik
 	* Added frame interrupt handler
