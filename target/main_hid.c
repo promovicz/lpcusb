@@ -82,6 +82,7 @@ static U8 abReportDesc[] = {
 	0xC0
 };
 
+
 static const U8 abDescriptors[] = {
 
 /* Device descriptor */
@@ -139,7 +140,7 @@ static const U8 abDescriptors[] = {
 
 // string descriptors
 	0x04,
-	0x03,
+	DESC_STRING,
 	LE_WORD(0x0409),
 
 	// manufacturer string
@@ -170,16 +171,25 @@ static const U8 abDescriptors[] = {
 **************************************************************************/
 static BOOL HandleClassRequest(TSetupPacket *pSetup, int *piLen, U8 **ppbData)
 {
+	U8	*pbData = *ppbData;
+
 	switch (pSetup->bRequest) {
 	
+   	// get_idle
+	case HID_GET_IDLE:
+		DBG("GET IDLE, val=%X, idx=%X\n", pSetup->wValue, pSetup->wIndex);
+		pbData[0] = (_iIdleRate / 4) & 0xFF;
+		*piLen = 1;
+		break;
+
 	// set_idle:
-	case 0x0A:
+	case HID_SET_IDLE:
 		DBG("SET IDLE, val=%X, idx=%X\n", pSetup->wValue, pSetup->wIndex);
-		_iIdleRate = (pSetup->wValue & 0xFF) * 4;
+		_iIdleRate = ((pSetup->wValue >> 8) & 0xFF) * 4;
 		break;
 
 	default:
-		DBG("Unhandled class\n");
+		DBG("Unhandled class %X\n", pSetup->bRequest);
 		return FALSE;
 	}
 	return TRUE;
@@ -210,16 +220,17 @@ static BOOL HIDHandleStdReq(TSetupPacket *pSetup, int *piLen, U8 **ppbData)
 		bIndex = GET_DESC_INDEX(pSetup->wValue);
 		switch (bType) {
 
-		case 0x22:
+		case DESC_HID_REPORT:
 			// report
 			*ppbData = abReportDesc;
 			*piLen = sizeof(abReportDesc);
 			break;
 
+		case DESC_HID_HID:
+		case DESC_HID_PHYSICAL:
 		default:
-			// unknown request
-			DBG("Unhandled HID req %X\n", bType);
-			return FALSE;
+		    // search descriptor space
+		    return USBHandleDescriptor(pSetup->wValue, pSetup->wIndex, piLen, ppbData);
 		}
 		
 		return TRUE;
