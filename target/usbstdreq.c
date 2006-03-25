@@ -187,16 +187,16 @@ static BOOL HandleStdEndPointReq(TSetupPacket	*pSetup, int *piLen, U8 **ppbData)
 	switch (pSetup->bRequest) {
 	case REQ_GET_STATUS:
 		// bit 0 = endpointed halted or not
-		pbData[0] = USBHwGetEPStall(pSetup->wIndex);
+		pbData[0] = USBHwGetEPStall(pSetup->wIndex) ? 1 : 0;
 		pbData[1] = 0;
 		*piLen = 2;
 		break;
 		
 	case REQ_CLEAR_FEATURE:
 		if (pSetup->wValue == FEA_ENDPOINT_HALT) {
-		// clear HALT by unstalling
-		USBHwEPStall(pSetup->wIndex, FALSE);
-		break;
+			// clear HALT by unstalling
+			USBHwEPStall(pSetup->wIndex, FALSE);
+			break;
 		}
 		// only ENDPOINT_HALT defined for endpoints
 		return FALSE;
