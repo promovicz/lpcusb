@@ -112,6 +112,7 @@ static void StallControlPipe(U8 bEPStat)
 	}
 	DBG("] stat=%x\n", bEPStat);
 	USBHwEPStall(0x00, TRUE);
+	USBHwEPStall(0x80, TRUE);
 }
 
 
