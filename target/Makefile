@@ -5,6 +5,8 @@ APPNAME = main
 PKG_NAME	= target
 DATE		= $$(date +%Y%m%d)
 
+LINKFILE	= lpc2148-rom.ld
+
 # Tool definitions
 CC      = arm-elf-gcc
 LD      = arm-elf-ld -v
@@ -17,7 +19,7 @@ TAR		= tar
 
 CFLAGS  = -I./ -c -W -Wall -Os -g -DDEBUG -mcpu=arm7tdmi
 ASFLAGS = -ahls -mapcs-32 -o crt.o
-LFLAGS  =  -T lpc2148-rom.ld -nostartfiles --warn-common
+LFLAGS  =  -T $(LINKFILE) -nostartfiles --warn-common
 CPFLAGS = -O ihex
 ODFLAGS	= -x --syms
 
@@ -41,7 +43,7 @@ app: $(APPNAME).elf
 	$(CP) $(CPFLAGS) $(APPNAME).elf $(APPNAME).hex
 	$(OD) $(ODFLAGS) $(APPNAME).elf > $(APPNAME).dmp
 
-$(APPNAME).elf: $(OBJS) $(LIBNAME).a lpc2148_flash.cmd
+$(APPNAME).elf: $(OBJS) $(LIBNAME).a $(LINKFILE)
 	@ echo "..linking"
 	$(CC) $(OBJS) $(LIBNAME).a $(LFLAGS) -o $(APPNAME).elf -Wl,-Map,$(APPNAME).map
 
