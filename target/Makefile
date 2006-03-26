@@ -17,11 +17,11 @@ TAR		= tar
 
 CFLAGS  = -I./ -c -W -Wall -Os -g -DDEBUG -mcpu=arm7tdmi
 ASFLAGS = -ahls -mapcs-32 -o crt.o
-LFLAGS  =  -T lpc2148_flash.cmd -nostartfiles
+LFLAGS  =  -T lpc2148-rom.ld -nostartfiles --warn-common
 CPFLAGS = -O ihex
 ODFLAGS	= -x --syms
 
-OBJS =	crt.o startup.o printf.o console.o main_hid.o
+OBJS =	crt.o startup.o printf.o console.o main_hid.o 
 
 LIBOBJS =	usbhw_lpc.o usbcontrol.o usbstdreq.o usbinit.o usbdescrip.o
 
