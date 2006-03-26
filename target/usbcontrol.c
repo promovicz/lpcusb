@@ -104,15 +104,15 @@ static void StallControlPipe(U8 bEPStat)
 	U8	*pb;
 	int	i;
 
-	DBG("STALL on [");
+	USBHwEPStall(0x80, TRUE);
+
 // dump setup packet
+	DBG("STALL on [");
 	pb = (U8 *)&Setup;
 	for (i = 0; i < 8; i++) {
 		DBG(" %02x", *pb++);
 	}
 	DBG("] stat=%x\n", bEPStat);
-	USBHwEPStall(0x00, TRUE);
-	USBHwEPStall(0x80, TRUE);
 }
 
 
@@ -180,8 +180,8 @@ void USBHandleControlTransfer(U8 bEP, U8 bEPStat)
 					// received all, send data to handler
 					pbData = abControlData;
 					if (!_HandleRequest(&Setup, &iLen, &pbData)) {
-						StallControlPipe(bEPStat);
 						DBG("_HandleRequest2 failed\n");
+						StallControlPipe(bEPStat);
 						return;
 					}
 					// send status to host
@@ -197,7 +197,7 @@ void USBHandleControlTransfer(U8 bEP, U8 bEPStat)
 	}
 	else if (bEP == 0x80) {
 		// IN transfer
-		// send more data if available
+		// send more data if available (possibly a 0-length packet)
 		DataIn();
 	}
 	else {
