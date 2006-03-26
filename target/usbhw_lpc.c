@@ -466,8 +466,10 @@ DEBUG_LED_ON(9);
 		for (i = 0; i < 32; i++) {
 			dwIntBit = (1 << i);
 			if (dwEPIntStat & dwIntBit) {
-				// read status (and clear int in USB domain)
-				bEPStat = USBHwCmdRead(CMD_EP_SELECT_CLEAR | i);
+				// clear int (and retrieve status)
+				USBEpIntClr = dwIntBit;
+				Wait4DevInt(CDFULL);
+				bEPStat = USBCmdData;
 				// convert EP pipe stat into something HW independent
 				bStat = ((bEPStat & EPSTAT_FE) ? EP_STATUS_DATA : 0) |
 						((bEPStat & EPSTAT_ST) ? EP_STATUS_STALLED : 0) |
@@ -478,8 +480,6 @@ DEBUG_LED_ON(9);
 				if (_apfnEPIntHandlers[i / 2] != NULL) {
 					_apfnEPIntHandlers[i / 2](IDX2EP(i), bStat);
 				}
-				// clear int
-				USBEpIntClr = dwIntBit;
 			}
 		}
 		// clear EP_SLOW
