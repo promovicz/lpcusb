@@ -1,8 +1,23 @@
+v20060405
+	20060328, bertrik
+	* main_serial.c: new file, USB serial port emulation
+	* usbser.inf: new file
+	
+	20060326, bertrik
+	* Renamed linker file from .cmd to .ld, added ram linker file.
+	* usbcontrol.c: fixed STALL, now stalls IN control endpoint, instead of OUT.
+	* usbhw_lpc.c: updated clearing of EP interrupt and retrieval of EP status
+	* Makefile: linker file cleanup
+	
+	20060308, bertrik
+	* usbhw_lpc.c: turned off debug LEDs by default
+	
 	20060321, fixes/additions by Martin Mueller
 	* usbstdreq.c: fixes for passing the USBCV compliance tests
 	* usbhw_lpc.c/.h: added function to get stall property of endpoint
 	* usbstruct.h: added more USB definitions
 	* main_hid.c: updated to pass HID compliance tests
+	* Makefile: rename (makefile->Makefile) to allow compilation under Linux
 
 v20060307
 	20060307, bertrik
