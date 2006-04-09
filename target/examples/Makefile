@@ -21,13 +21,14 @@ LINKFILE	= lpc2148-rom.ld
 
 OBJS =	crt.o startup.o printf.o console.o
 
-EXAMPLES = hid serial msc
+EXAMPLES = hid serial msc custom
 
 all: $(EXAMPLES)
 
 hid: 	$(OBJS) main_hid.o $(LIBNAME).a
 serial:	$(OBJS) main_serial.o $(LIBNAME).a
 msc:	$(OBJS) main.o $(LIBNAME).a
+custom:	$(OBJS) main_custom.o $(LIBNAME).a
 
 $(EXAMPLES):
 	@ echo "Building $@ example..."
