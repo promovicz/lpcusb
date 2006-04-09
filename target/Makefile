@@ -1,11 +1,8 @@
 LIBNAME	= usbstack
-APPNAME = main
 
 # Package definitions
 PKG_NAME	= target
 DATE		= $$(date +%Y%m%d)
-
-LINKFILE	= lpc2148-rom.ld
 
 # Tool definitions
 CC      = arm-elf-gcc
@@ -17,44 +14,32 @@ OD		= arm-elf-objdump
 RM		= rm
 TAR		= tar
 
-CFLAGS  = -I./ -c -W -Wall -Os -g -DDEBUG -mcpu=arm7tdmi
-ASFLAGS = -ahls -mapcs-32 -o crt.o
-LFLAGS  =  -T $(LINKFILE) -nostartfiles --warn-common
-CPFLAGS = -O ihex
-ODFLAGS	= -x --syms
-
-OBJS =	crt.o startup.o printf.o console.o main_hid.o 
+CFLAGS  = -I./ -I../ -c -W -Wall -Os -g -DDEBUG -mcpu=arm7tdmi
+ARFLAGS = -rcs
 
 LIBOBJS =	usbhw_lpc.o usbcontrol.o usbstdreq.o usbinit.o usbdescrip.o
 
-all: lib app
+all: lib examples
 
 clean:
 	$(RM) -f $(LIBNAME).a $(LIBOBJS)
-	$(RM) -f $(APPNAME).hex $(APPNAME).elf $(OBJS) *.lst $(APPNAME).dmp $(APPNAME).map
+	make -C examples clean
+
+examples:
+	make -C examples
 
 # build lib
-lib: $(LIBOBJS)
-	$(RM) -f $(LIBNAME).a
-	$(AR) -r $(LIBNAME).a $(LIBOBJS)
+lib: $(LIBNAME).a
 
-app: $(APPNAME).elf
-	@ echo "...copying"
-	$(CP) $(CPFLAGS) $(APPNAME).elf $(APPNAME).hex
-	$(OD) $(ODFLAGS) $(APPNAME).elf > $(APPNAME).dmp
+$(LIBNAME).a: $(LIBOBJS)
+	$(AR) $(ARFLAGS) $@ $^
 
-$(APPNAME).elf: $(OBJS) $(LIBNAME).a $(LINKFILE)
-	@ echo "..linking"
-	$(CC) $(OBJS) $(LIBNAME).a $(LFLAGS) -o $(APPNAME).elf -Wl,-Map,$(APPNAME).map
-
-crt.o: crt.s
-	@ echo ".assembling"
-	$(CC) -c $(AFLAGS) -Wa,-ahlms=crt.lst crt.s -o crt.o
-	
 # Builds release tar file
 dist: clean
 	cd .. && $(TAR) --exclude={CVS,cvs} -cvzf $(PKG_NAME)-$(DATE).tar.gz $(PKG_NAME)
 
 # recompile if the Makefile changes
-$(OBJS) $(LIBOBJS): Makefile
+$(LIBOBJS): Makefile
 
+# phony targets
+.PHONY: clean examples
