@@ -141,9 +141,9 @@ static const U8 abDescriptors[] = {
 	0x07,
 	DESC_ENDPOINT,
 	INT_IN_EP,					// bEndpointAddress
-	0x03,						// bmAttributes = bulk
+	0x03,						// bmAttributes = intr
 	LE_WORD(8),					// wMaxPacketSize
-	0x01,						// bInterval
+	0x0A,						// bInterval
 // data class interface descriptor
 	0x09,
 	DESC_INTERFACE,
@@ -254,6 +254,7 @@ DBG("GET_LINE_CODING\n");
 
 	// set control line state
 	case SET_CONTROL_LINE_STATE:
+		// bit0 = DTR, bit = RTS
 DBG("SET_CONTROL_LINE_STATE %X\n", pSetup->wValue);
 		break;
 
