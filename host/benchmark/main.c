@@ -32,7 +32,9 @@
 #include "usb.h"
 
 // types
+#ifndef MIN
 #define MIN(a,b)	((a)<(b)?(a):(b))
+#endif
 typedef unsigned int U32;
 typedef unsigned char U8;
 
@@ -130,7 +132,7 @@ int main(int argc, char *argv[])
 		// send a vendor request for a read
 		MemCmd.dwAddress = 0;
 		MemCmd.dwLength = 1024 * 1024;
-		i = usb_control_msg(hdl, BM_REQUEST_TYPE, 0x01, 0, 0, (U8 *)&MemCmd, sizeof(MemCmd), 1000);
+		i = usb_control_msg(hdl, BM_REQUEST_TYPE, 0x01, 0, 0, (char *)&MemCmd, sizeof(MemCmd), 1000);
 		if (i < 0) {
 			fprintf(stderr, "usb_control_msg failed %d\n", i);
 		}
@@ -138,7 +140,7 @@ int main(int argc, char *argv[])
 		starttimer();
 		while (MemCmd.dwLength > 0) {
 			dwChunk = MIN(dwBlockSize, MemCmd.dwLength);
-			i = usb_bulk_read(hdl, 0x82, abData, dwBlockSize, 2000);
+			i = usb_bulk_read(hdl, 0x82, (char *)abData, dwBlockSize, 2000);
 			if (i < 0) {
 				fprintf(stderr, "usb_bulk_read failed %d\n", i);
 				break;
@@ -158,7 +160,7 @@ int main(int argc, char *argv[])
 		// send a vendor request for a write
 		MemCmd.dwAddress = 0;
 		MemCmd.dwLength = 1024 * 1024;
-		i = usb_control_msg(hdl, BM_REQUEST_TYPE, 0x02, 0, 0, (U8 *)&MemCmd, sizeof(MemCmd), 1000);
+		i = usb_control_msg(hdl, BM_REQUEST_TYPE, 0x02, 0, 0, (char *)&MemCmd, sizeof(MemCmd), 1000);
 		if (i < 0) {
 			fprintf(stderr, "usb_control_msg failed %d\n", i);
 		}
@@ -166,7 +168,7 @@ int main(int argc, char *argv[])
 		starttimer();
 		while (MemCmd.dwLength > 0) {
 			dwChunk = MIN(dwBlockSize, MemCmd.dwLength);
-			i = usb_bulk_write(hdl, 0x05, abData, dwBlockSize, 2000);
+			i = usb_bulk_write(hdl, 0x05, (char *)abData, dwBlockSize, 2000);
 			if (i < 0) {
 				fprintf(stderr, "usb_bulk_read failed %d\n", i);
 				break;
