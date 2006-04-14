@@ -309,7 +309,7 @@ BOOL USBHwEPWrite(U8 bEP, U8 *pbBuf, int iLen)
 	idx = EP2IDX(bEP);
 	
 //	DBG("<%d", iLen);
-	DBG("<");
+//	DBG("<");
 
 	// set write enable for specific endpoint
 	USBCtrl = WR_EN | ((bEP & 0xF) << 2);
