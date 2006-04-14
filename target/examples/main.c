@@ -36,6 +36,7 @@
 
 
 static U8 abBulkBuf[64];
+static U8 abClassReqData[4];
 
 static const U8 abDescriptors[] = {
 
@@ -181,7 +182,7 @@ int main(void)
 	USBRegisterDescriptors(abDescriptors);
 
 	// register class request handler
-	USBRegisterRequestHandler(REQTYPE_TYPE_CLASS, HandleClassRequest);
+	USBRegisterRequestHandler(REQTYPE_TYPE_CLASS, HandleClassRequest, abClassReqData);
 	
 	// register endpoint handlers
 	USBHwRegisterEPIntHandler(BULK_IN_EP, MAX_PACKET_SIZE, BulkIn);

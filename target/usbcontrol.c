@@ -52,14 +52,13 @@
 #define	MAX_REQ_HANDLERS	4	// standard, class, vendor, reserved
 
 static TSetupPacket		Setup;
-static U8				abControlData[MAX_CONTROL_SIZE];
 
 static U8				*pbData;	// pointer to data buffer
 static int				iResidue;		// remaining bytes in buffer
 static int				iLen;		// total length of control transfer
 
 static TFnHandleRequest *apfnReqHandlers[4] = {NULL, NULL, NULL, NULL};
-
+static U8				*apbDataStore[4] = {NULL, NULL, NULL, NULL};
 
 /*************************************************************************
 	_HandleRequest
@@ -141,17 +140,19 @@ static void DataIn(void)
 **************************************************************************/
 void USBHandleControlTransfer(U8 bEP, U8 bEPStat)
 {
-	int iChunk;
+	int iChunk, iType;
 
 	if (bEP == 0x00) {
 		// OUT transfer
+		iType = REQTYPE_GET_TYPE(Setup.bmRequestType);
+
 		if (bEPStat & EP_STATUS_SETUP) {
 			// setup packet, reset request message state machine
 			USBHwEPRead(0x00, (U8 *)&Setup, &iLen);
 			DBG("S%x", Setup.bRequest);
 
 			// defaults for data pointer and residue
-			pbData = abControlData;
+			pbData = apbDataStore[iType];
 			iResidue = Setup.wLength;
 			iLen = Setup.wLength;
 
@@ -178,7 +179,7 @@ void USBHandleControlTransfer(U8 bEP, U8 bEPStat)
 				iResidue -= iChunk;
 				if (iResidue == 0) {
 					// received all, send data to handler
-					pbData = abControlData;
+					pbData = apbDataStore[iType];
 					if (!_HandleRequest(&Setup, &iLen, &pbData)) {
 						DBG("_HandleRequest2 failed\n");
 						StallControlPipe(bEPStat);
@@ -211,14 +212,16 @@ void USBHandleControlTransfer(U8 bEP, U8 bEPStat)
 	=========================
 		Registers a callback for handling requests
 		
-	IN		iType		Type of request, e.g. REQTYPE_TYPE_STANDARD
-			*pfnHandler	Callback function pointer
+	IN		iType			Type of request, e.g. REQTYPE_TYPE_STANDARD
+			*pfnHandler		Callback function pointer
+			*pbDataStore	Data storage area for this type of request
 
 **************************************************************************/
-void USBRegisterRequestHandler(int iType, TFnHandleRequest *pfnHandler)
+void USBRegisterRequestHandler(int iType, TFnHandleRequest *pfnHandler, U8 *pbDataStore)
 {
 	ASSERT(iType >= 0);
 	ASSERT(iType < 4);
 	apfnReqHandlers[iType] = pfnHandler;
+	apbDataStore[iType] = pbDataStore;
 }
 

@@ -22,6 +22,10 @@
 #include "usbapi.h"
 
 
+// data storage area for standard requests
+U8	abStdReqData[8];
+
+
 /*************************************************************************
 	HandleUsbReset
 	==============
@@ -55,7 +59,7 @@ BOOL USBInit(void)
 	USBHwRegisterEPIntHandler(0x80, MAX_PACKET_SIZE0, USBHandleControlTransfer);
 	
 	// register standard request handler
-	USBRegisterRequestHandler(REQTYPE_TYPE_STANDARD, USBHandleStandardRequest);
+	USBRegisterRequestHandler(REQTYPE_TYPE_STANDARD, USBHandleStandardRequest, abStdReqData);
 
 	// register
 	USBRegisterDescriptorHandler(USBHandleDescriptor);

@@ -132,6 +132,7 @@ typedef struct {
 
 
 static TMemoryCmd	MemoryCmd;
+static U8			abVendorReqData[sizeof(TMemoryCmd)];
 
 
 static void _HandleBulkIn(U8 bEP, U8 bEPStatus)
@@ -243,7 +244,7 @@ int main(void)
 	USBRegisterDescriptors(abDescriptors);
 
 	// override standard request handler
-	USBRegisterRequestHandler(REQTYPE_TYPE_VENDOR, HandleVendorRequest);
+	USBRegisterRequestHandler(REQTYPE_TYPE_VENDOR, HandleVendorRequest, abVendorReqData);
 
 	// register endpoints
 	USBHwRegisterEPIntHandler(BULK_IN_EP, MAX_PACKET_SIZE, _HandleBulkIn);

@@ -76,6 +76,7 @@ typedef struct {
 
 static TLineCoding LineCoding = {115200, 0, 0, 8};
 static U8 abBulkBuf[64];
+static U8 abClassReqData[8];
 
 
 static const U8 abDescriptors[] = {
@@ -286,7 +287,7 @@ int main(void)
 	USBRegisterDescriptors(abDescriptors);
 
 	// register class request handler
-	USBRegisterRequestHandler(REQTYPE_TYPE_CLASS, HandleClassRequest);
+	USBRegisterRequestHandler(REQTYPE_TYPE_CLASS, HandleClassRequest, abClassReqData);
 
 	// register endpoint handlers
 	USBHwRegisterEPIntHandler(INT_IN_EP, 8, NULL);

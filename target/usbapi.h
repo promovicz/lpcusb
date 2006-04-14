@@ -60,12 +60,15 @@ void USBHwRegisterFrameHandler(TFnFrameHandler *pfnHandler);
 	USB application interface
 **************************************************************************/
 
+// data storage area for standard (chapter 9) requests
+extern U8	abStdReqData[];
+
 // initialise the complete stack, including HW
 BOOL USBInit(void);
 
 // register a callback for requests (vendor, class)
 typedef BOOL (TFnHandleRequest)(TSetupPacket *pSetup, int *piLen, U8 **ppbData);
-void USBRegisterRequestHandler(int iType, TFnHandleRequest *pfnHandler);
+void USBRegisterRequestHandler(int iType, TFnHandleRequest *pfnHandler, U8 *pbDataStore);
 
 // register a callback for descriptors
 typedef BOOL (TFnGetDescriptor)(U16 wTypeIndex, U16 wLangID, int *piLen, U8 **ppbData);

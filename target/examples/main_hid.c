@@ -33,6 +33,7 @@
 
 #define REPORT_SIZE			4
 
+static U8	abClassReqData[4];
 static U8	abReport[] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07};
 static int	_iIdleRate = 0;
 static int	_iFrame = 0;
@@ -279,10 +280,10 @@ int main(void)
 	USBRegisterDescriptors(abDescriptors);
 
 	// override standard request handler
-	USBRegisterRequestHandler(REQTYPE_TYPE_STANDARD, HIDHandleStdReq);
+	USBRegisterRequestHandler(REQTYPE_TYPE_STANDARD, HIDHandleStdReq, abStdReqData);
 
 	// register class request handler
-	USBRegisterRequestHandler(REQTYPE_TYPE_CLASS, HandleClassRequest);
+	USBRegisterRequestHandler(REQTYPE_TYPE_CLASS, HandleClassRequest, abClassReqData);
 
 	// register endpoint
 	USBHwRegisterEPIntHandler(INTR_IN_EP, MAX_PACKET_SIZE, NULL);
