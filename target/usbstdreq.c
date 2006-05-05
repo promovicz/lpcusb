@@ -43,6 +43,7 @@
 
 // device state info
 static U8				bConfiguration = 0;
+static TFnHandleRequest	*pfnHandleCustomReq = NULL;
 
 /*************************************************************************
 	HandleStdDeviceReq
@@ -219,7 +220,7 @@ static BOOL HandleStdEndPointReq(TSetupPacket	*pSetup, int *piLen, U8 **ppbData)
 
 /*************************************************************************
 	USBHandleStandardRequest
-	===================
+	========================
 		Local function to handle a standard request
 		
 	IN		pSetup		The setup packet
@@ -230,6 +231,11 @@ static BOOL HandleStdEndPointReq(TSetupPacket	*pSetup, int *piLen, U8 **ppbData)
 **************************************************************************/
 BOOL USBHandleStandardRequest(TSetupPacket	*pSetup, int *piLen, U8 **ppbData)
 {
+	// try the custom request handler first
+	if ((pfnHandleCustomReq != NULL) && pfnHandleCustomReq(pSetup, piLen, ppbData)) {
+		return TRUE;
+	}
+	
 	switch (REQTYPE_GET_RECIP(pSetup->bmRequestType)) {
 	case REQTYPE_RECIP_DEVICE:		return HandleStdDeviceReq(pSetup, piLen, ppbData);
 	case REQTYPE_RECIP_INTERFACE:	return HandleStdInterfaceReq(pSetup, piLen, ppbData);
@@ -239,4 +245,16 @@ BOOL USBHandleStandardRequest(TSetupPacket	*pSetup, int *piLen, U8 **ppbData)
 }
 
 
+/*************************************************************************
+	USBRegisterCustomReqHandler
+	===========================
+		Registers a callback for custom standard device requests
+		
+	IN		pfnHandler	Callback function pointer
+
+**************************************************************************/
+void USBRegisterCustomReqHandler(TFnHandleRequest *pfnHandler)
+{
+	pfnHandleCustomReq = pfnHandler;
+}
 
