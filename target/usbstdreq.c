@@ -152,12 +152,10 @@ static BOOL HandleStdInterfaceReq(TSetupPacket	*pSetup, int *piLen, U8 **ppbData
 	
 	case REQ_SET_INTERFACE:	// TODO use bNumInterfaces
 		// there is only one interface (= 0)
-		if (pSetup->wValue == 0) {
-			// ACK (zero packet) will be sent automatically
-		}
-		else {
+		if (pSetup->wValue != 0) {
 			return FALSE;
 		}
+		*piLen = 0;
 		break;
 
 	default:
