@@ -61,9 +61,6 @@ BOOL USBInit(void)
 	// register standard request handler
 	USBRegisterRequestHandler(REQTYPE_TYPE_STANDARD, USBHandleStandardRequest, abStdReqData);
 
-	// register
-	USBRegisterDescriptorHandler(USBHandleDescriptor);
-
 	return TRUE;
 }
 

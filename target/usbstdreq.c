@@ -43,7 +43,6 @@
 
 // device state info
 static U8				bConfiguration = 0;
-static TFnGetDescriptor	*pfnGetDescriptor = NULL;
 
 /*************************************************************************
 	HandleStdDeviceReq
@@ -76,10 +75,7 @@ static BOOL HandleStdDeviceReq(TSetupPacket *pSetup, int *piLen, U8 **ppbData)
 
 	case REQ_GET_DESCRIPTOR:
 		DBG("D%x", pSetup->wValue);
-		if (pfnGetDescriptor == NULL) {
-			return FALSE;
-		}
-		return pfnGetDescriptor(pSetup->wValue, pSetup->wIndex, piLen, ppbData);
+		return USBHandleDescriptor(pSetup->wValue, pSetup->wIndex, piLen, ppbData);
 
 	case REQ_GET_CONFIGURATION:
 		// indicate if we are configured
@@ -242,18 +238,5 @@ BOOL USBHandleStandardRequest(TSetupPacket	*pSetup, int *piLen, U8 **ppbData)
 	}
 }
 
-
-/*************************************************************************
-	USBRegisterDescriptorHandler
-	=========================
-		Registers a callback for handling descriptors
-		
-	IN		pfnGetDesc	Callback function pointer
-
-**************************************************************************/
-void USBRegisterDescriptorHandler(TFnGetDescriptor *pfnGetDesc)
-{
-	pfnGetDescriptor = pfnGetDesc;
-}
 
 
