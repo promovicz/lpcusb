@@ -258,15 +258,15 @@ void USBHwConnect(BOOL fConnect)
 
 
 /*************************************************************************
-	USBHwGetEPStall
-	============
+	USBHwEPIsStalled
+	================
 		Gets the stalled property of an endpoint
 		
 	IN		bEP		Endpoint number
 			
-	Returns TRUE if stalled, FALSE if unstalled			
+	Returns TRUE if stalled, FALSE if not stalled
 **************************************************************************/
-BOOL USBHwGetEPStall(U8 bEP)
+BOOL USBHwEPIsStalled(U8 bEP)
 {
    	int idx = EP2IDX(bEP);
 
