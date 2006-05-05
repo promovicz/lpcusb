@@ -125,13 +125,14 @@ static const U8 abDescriptors[] = {
 
 // HID descriptor
 	0x09, 
-	0x21, 					// bDescriptorType = HID
+	DESC_HID_HID, 			// bDescriptorType = HID
 	LE_WORD(0x0110),		// bcdHID
 	0x00,   				// bCountryCode
 	0x01,   				// bNumDescriptors = report
-	0x22,   				// bDescriptorType
+	DESC_HID_REPORT,   		// bDescriptorType
 	LE_WORD(sizeof(abReportDesc)),
 
+// EP descriptor
 	0x07,   		
 	DESC_ENDPOINT,   		
 	INTR_IN_EP,				// bEndpointAddress
@@ -206,8 +207,6 @@ static BOOL HandleClassRequest(TSetupPacket *pSetup, int *piLen, U8 **ppbData)
 		Standard request handler for HID devices.
 		
 	This function tries to service any HID specific requests.
-	If the request turns out to be not HID specific, it is passed on to the
-	'chapter 9' standard request handler.
 		
 **************************************************************************/
 static BOOL HIDHandleStdReq(TSetupPacket *pSetup, int *piLen, U8 **ppbData)
@@ -236,10 +235,7 @@ static BOOL HIDHandleStdReq(TSetupPacket *pSetup, int *piLen, U8 **ppbData)
 		
 		return TRUE;
 	}
-	else {
-		// pass it on to the chapter 9 standard request handler
-		return USBHandleStandardRequest(pSetup, piLen, ppbData);
-	}
+	return FALSE;
 }
 
 
@@ -279,8 +275,8 @@ int main(void)
 	// register device descriptors
 	USBRegisterDescriptors(abDescriptors);
 
-	// override standard request handler
-	USBRegisterRequestHandler(REQTYPE_TYPE_STANDARD, HIDHandleStdReq, abStdReqData);
+	// register HID standard request handler
+	USBRegisterCustomReqHandler(HIDHandleStdReq);
 
 	// register class request handler
 	USBRegisterRequestHandler(REQTYPE_TYPE_CLASS, HandleClassRequest, abClassReqData);
