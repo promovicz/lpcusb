@@ -161,7 +161,7 @@ static void _HandleBulkOut(U8 bEP, U8 bEPStatus)
 	int iChunk;
 	
 	// get next part
-	USBHwEPRead(bEP, NULL, &iChunk);
+	iChunk = USBHwEPRead(bEP, NULL, 0);
 	
 	MemoryCmd.dwAddress += iChunk;
 	MemoryCmd.dwLength -= iChunk;	

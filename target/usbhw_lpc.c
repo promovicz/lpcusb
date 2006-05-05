@@ -301,8 +301,9 @@ void USBHwEPStall(U8 bEP, BOOL fStall)
 			iLen	Number of bytes to write
 			
 	Returns TRUE if the data was successfully written
+	or <0 in case of error.
 **************************************************************************/
-BOOL USBHwEPWrite(U8 bEP, U8 *pbBuf, int iLen)
+int USBHwEPWrite(U8 bEP, U8 *pbBuf, int iLen)
 {
 	int idx;
 	
@@ -327,7 +328,7 @@ BOOL USBHwEPWrite(U8 bEP, U8 *pbBuf, int iLen)
 	USBHwCmd(CMD_EP_SELECT | idx);
 	USBHwCmd(CMD_EP_VALIDATE_BUFFER);
 	
-	return TRUE;
+	return iLen;
 }
 
 
@@ -338,13 +339,14 @@ BOOL USBHwEPWrite(U8 bEP, U8 *pbBuf, int iLen)
 		
 	IN		bEP		Endpoint number
 			pbBuf	Endpoint data
-			iLen	Number of bytes to write
+			iMaxLen	Maximum number of bytes to read
 			
-	Returns TRUE if the data was successfully read
+	Returns the number of bytes available in the EP (possibly more than iMaxLen),
+	or <0 in case of error.
 **************************************************************************/
-BOOL USBHwEPRead(U8 bEP, U8 *pbBuf, int *piLen)
+int USBHwEPRead(U8 bEP, U8 *pbBuf, int iMaxLen)
 {
-	int idx;
+	int i, idx;
 	U32	dwData, dwLen;
 	
 	idx = EP2IDX(bEP);
@@ -359,21 +361,22 @@ BOOL USBHwEPRead(U8 bEP, U8 *pbBuf, int *piLen)
 	
 	// packet valid?
 	if ((dwLen & DV) == 0) {
-		*piLen = 0;
-		return FALSE;
+		return -1;
 	}
 	
 	// get length
 	dwLen &= PKT_LNGTH_MASK;
 	
-	// get data in 4-byte units
+	// get data
 	while (USBCtrl & RD_EN) {
 		dwData = USBRxData;
 		if (pbBuf != NULL) {
-			*pbBuf++ = dwData >> 0;
-			*pbBuf++ = dwData >> 8;
-			*pbBuf++ = dwData >> 16;
-			*pbBuf++ = dwData >> 24;
+			for (i = 0; i < 4; i++) {
+				if (iMaxLen-- != 0) {
+					*pbBuf++ = dwData & 0xFF;
+				}
+				dwData >>= 8;
+			}
 		}
 	}
 
@@ -381,12 +384,10 @@ BOOL USBHwEPRead(U8 bEP, U8 *pbBuf, int *piLen)
 	USBHwCmd(CMD_EP_SELECT | idx);
 	USBHwCmd(CMD_EP_CLEAR_BUFFER);
 	
-	*piLen = dwLen;
-
 //	DBG(">%d", dwLen);
 //	DBG(">");
 
-	return TRUE;
+	return dwLen;
 }
 
 

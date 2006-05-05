@@ -206,7 +206,7 @@ static void BulkOut(U8 bEP, U8 bEPStatus)
 	int i, iLen;
 	char c;
 
-	USBHwEPRead(bEP, abBulkBuf, &iLen);
+	iLen = USBHwEPRead(bEP, abBulkBuf, sizeof(abBulkBuf));
 
 	// show on console
 	for (i = 0; i < iLen; i++) {

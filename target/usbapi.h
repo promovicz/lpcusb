@@ -38,8 +38,8 @@ void USBHwSetAddress	(U8 addr);
 void USBHwConfigDevice	(BOOL fConfigured);
 
 // endpoint operations
-BOOL USBHwEPRead		(U8 bEP, U8 *pbBuf, int *piLen);
-BOOL USBHwEPWrite		(U8 bEP, U8 *pbBuf, int iLen);
+int  USBHwEPRead		(U8 bEP, U8 *pbBuf, int iMaxLen);
+int	 USBHwEPWrite		(U8 bEP, U8 *pbBuf, int iLen);
 void USBHwEPStall		(U8 bEP, BOOL fStall);
 BOOL USBHwEPIsStalled	(U8 bEP);
 

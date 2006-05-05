@@ -123,7 +123,7 @@ static void BulkOut(U8 bEP, U8 bEPStatus)
 {
 	int iLen;
 	
-	USBHwEPRead(bEP, abBulkBuf, &iLen);
+	iLen = USBHwEPRead(bEP, abBulkBuf, sizeof(abBulkBuf));
 
 	DBG("OUT %d\n", iLen);
 

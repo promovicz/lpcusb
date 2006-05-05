@@ -148,7 +148,7 @@ void USBHandleControlTransfer(U8 bEP, U8 bEPStat)
 
 		if (bEPStat & EP_STATUS_SETUP) {
 			// setup packet, reset request message state machine
-			USBHwEPRead(0x00, (U8 *)&Setup, &iLen);
+			USBHwEPRead(0x00, (U8 *)&Setup, sizeof(Setup));
 			DBG("S%x", Setup.bRequest);
 
 			// defaults for data pointer and residue
@@ -173,8 +173,11 @@ void USBHandleControlTransfer(U8 bEP, U8 bEPStat)
 		else {		
 			if (iResidue > 0) {
 				// store data
-				iChunk = 0;
-				USBHwEPRead(0x00, pbData, &iChunk);
+				iChunk = USBHwEPRead(0x00, pbData, iResidue);
+				if (iChunk < 0) {
+					StallControlPipe(bEPStat);
+					return;
+				}
 				pbData += iChunk;
 				iResidue -= iChunk;
 				if (iResidue == 0) {
@@ -191,7 +194,7 @@ void USBHandleControlTransfer(U8 bEP, U8 bEPStat)
 			}
 			else {
 				// absorb zero-length status message
-				USBHwEPRead(0x00, NULL, &iChunk);
+				iChunk = USBHwEPRead(0x00, NULL, 0);
 				DBG(iChunk > 0 ? "?" : "");
 			}
 		}
