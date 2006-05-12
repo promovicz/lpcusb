@@ -23,18 +23,29 @@
 #define EP_STATUS_NACKED	(1<<3)		// EP sent NAK
 #define EP_STATUS_ERROR		(1<<4)		// EP data was overwritten by setup packet
 
-// device status send through callback
+// device status sent through callback
 #define DEV_STATUS_CONNECT		(1<<0)
 #define DEV_STATUS_SUSPEND		(1<<2)
 #define DEV_STATUS_RESET		(1<<4)
+
+// interrupt bits for NACK events in USBHwEnableNackInt
+// (these bits conveniently coincide with the LPC214x USB controller bit)
+#define INACK_CI		(1<<1)
+#define INACK_CO		(1<<2)
+#define INACK_II		(1<<3)
+#define INACK_IO		(1<<4)
+#define INACK_BI		(1<<5)
+#define INACK_BO		(1<<6)
 
 BOOL USBHwInit			(void);
 void USBHwReset			(void);
 void USBHwISR			(void);
 
+void USBHwNakIntEnable	(U8 bIntBits);
+
 void USBHwConnect		(BOOL fConnect);
 
-void USBHwSetAddress	(U8 addr);
+void USBHwSetAddress	(U8 bAddr);
 void USBHwConfigDevice	(BOOL fConfigured);
 
 // endpoint operations

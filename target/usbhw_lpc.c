@@ -248,12 +248,37 @@ void USBHwSetAddress(U8 bAddr)
 
 /*************************************************************************
 	USBHwConnect
-	===============
+	============
+		Connects or disconnects from the USB bus
+		
+	IN		fConnect	If TRUE, connect, otherwise disconnect
 
 **************************************************************************/
 void USBHwConnect(BOOL fConnect)
 {
 	USBHwCmdWrite(CMD_DEV_STATUS, fConnect ? CON : 0);
+}
+
+
+/*************************************************************************
+	USBHwNackIntEnable
+	==================
+		Enables interrupt on NAK condition
+		
+	For IN endpoints a NAK is generated when the host wants to read data
+	from the device, but none is available in the endpoint buffer.
+	For OUT endpoints a NAK is generated when the host wants to write data
+	to the device, but the endpoint buffer is still full.
+	
+	The endpoint interrupt handlers can distinguish regular (ACK) interrupts
+	from NAK interrupt by checking the bits in their bEPStatus argument.
+	
+	IN		bIntBits	Bitmap indicating which NAK interrupts to enable
+
+**************************************************************************/
+void USBHwNakIntEnable(U8 bIntBits)
+{
+	USBHwCmdWrite(CMD_DEV_SET_MODE, bIntBits);
 }
 
 
@@ -552,6 +577,9 @@ BOOL USBHwInit(void)
 	// enable/clear control endpoints
 	USBHwEPEnable(0, TRUE);
 	USBHwEPEnable(1, TRUE);
+	
+	// by default, only ACKs generate interrupts
+	USBHwNakIntEnable(0);
 	
 	// init debug leds
 	DEBUG_LED_INIT(8);
