@@ -1,7 +1,14 @@
+	20060512, bertrik
+	* Added mass storage application example (using the SD card interface from EFSL).
+	* usbhw_lpc.c: Added function USBHwNakIntEnable
+	
 	20060505, bertrik
-	* Renamed function USBHwGetEPStall to USBHwEPIsStalled
+	* usbhw_lpc.c: Renamed function USBHwGetEPStall to USBHwEPIsStalled
 	* Removed installable descriptor handler (is now called directly)
 	* Added standard request handler hook (through USBRegisterCustomReqHandler)
+	* usbhw_lpc.c: Updated USBHwEPRead API: now takes an extra argument for maximum length
+	* usbhw_lpc.c: Updated USBHwEPRead/USBHeEPWrite API: now returns int (number of bytes) instead of BOOL
+
 	20060415, bertrik
 	* updated data storage for control transfers, each handler now provides its own.
 
