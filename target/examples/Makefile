@@ -27,7 +27,7 @@ all: $(EXAMPLES)
 
 hid: 	$(OBJS) main_hid.o $(LIBNAME).a
 serial:	$(OBJS) main_serial.o $(LIBNAME).a
-msc:	$(OBJS) main_msc.o $(LIBNAME).a
+msc:	$(OBJS) main_msc.o msc_bot.o msc_scsi.o blockdev_sd.o lpc2000_spi.o $(LIBNAME).a
 custom:	$(OBJS) main_custom.o $(LIBNAME).a
 
 $(EXAMPLES):
