@@ -24,18 +24,16 @@
 #include "usbapi.h"
 #include "startup.h"
 
+#include "msc_bot.h"
+#include "blockdev.h"
 
 #define BAUD_RATE	115200
-
-#define BULK_OUT_EP		0x05
-#define BULK_IN_EP		0x82
 
 #define MAX_PACKET_SIZE	64
 
 #define LE_WORD(x)		(x&0xFF),(x>>8)
 
 
-static U8 abBulkBuf[64];
 static U8 abClassReqData[4];
 
 static const U8 abDescriptors[] = {
@@ -43,7 +41,7 @@ static const U8 abDescriptors[] = {
 // device descriptor	
 	0x12,
 	DESC_DEVICE,			
-	LE_WORD(0x0110),		// bcdUSB
+	LE_WORD(0x0200),		// bcdUSB
 	0x00,					// bDeviceClass
 	0x00,					// bDeviceSubClass
 	0x00,					// bDeviceProtocol
@@ -72,8 +70,8 @@ static const U8 abDescriptors[] = {
 	0x00,					// bInterfaceNumber
 	0x00,					// bAlternateSetting
 	0x02,					// bNumEndPoints
-	0x08,					// bInterfaceClass
-	0x05,					// bInterfaceSubClass = 8070i ATAPI-over-USB
+	0x08,					// bInterfaceClass = mass storage
+	0x06,					// bInterfaceSubClass = transparent SCSI
 	0x50,					// bInterfaceProtocol = BOT
 	0x00,					// iInterface
 // EP
@@ -113,25 +111,12 @@ static const U8 abDescriptors[] = {
 };
 
 
-static void BulkIn(U8 bEP, U8 bEPStatus)
-{
-	DBG("IN %x\n", bEPStatus);
-//	USBHwEPWrite(bEP, abBulkBuf, 64);
-}
-
-static void BulkOut(U8 bEP, U8 bEPStatus)
-{
-	int iLen;
+/*************************************************************************
+	HandleClassRequest
+	==================
+		Handle mass storage class request
 	
-	iLen = USBHwEPRead(bEP, abBulkBuf, sizeof(abBulkBuf));
-
-	DBG("OUT %d\n", iLen);
-
-	// echo
-	USBHwEPWrite(BULK_IN_EP, abBulkBuf, iLen);
-}
-
-
+**************************************************************************/
 static BOOL HandleClassRequest(TSetupPacket *pSetup, int *piLen, U8 **ppbData)
 {
 	if (pSetup->wIndex != 0) {
@@ -144,15 +129,21 @@ static BOOL HandleClassRequest(TSetupPacket *pSetup, int *piLen, U8 **ppbData)
 	}
 
 	switch (pSetup->bRequest) {
+
 	// get max LUN
 	case 0xFE:
 		*ppbData[0] = 0;		// No LUNs
 		*piLen = 1;
 		break;
+
 	// MSC reset
 	case 0xFF:
-		// MSC_Bot_Init();
+		if (pSetup->wLength > 0) {
+			return FALSE;
+		}
+		MSCBotReset();
 		break;
+		
 	default:
 		DBG("Unhandled class\n");
 		return FALSE;
@@ -173,11 +164,18 @@ int main(void)
 	// init DBG
 	ConsoleInit(60000000 / (16 * BAUD_RATE));
 
+	// initialise the SD card
+	BlockDevInit();
+
 	DBG("Initialising USB stack\n");
 
 	// initialise stack
 	USBInit();
 	
+	// enable bulk-in interrupts on NAKs
+	// these are required to get the BOT protocol going again after a STALL
+	USBHwNakIntEnable(INACK_BI);
+
 	// register descriptors
 	USBRegisterDescriptors(abDescriptors);
 
@@ -185,8 +183,8 @@ int main(void)
 	USBRegisterRequestHandler(REQTYPE_TYPE_CLASS, HandleClassRequest, abClassReqData);
 	
 	// register endpoint handlers
-	USBHwRegisterEPIntHandler(BULK_IN_EP, MAX_PACKET_SIZE, BulkIn);
-	USBHwRegisterEPIntHandler(BULK_OUT_EP, MAX_PACKET_SIZE, BulkOut);
+	USBHwRegisterEPIntHandler(BULK_IN_EP, MAX_PACKET_SIZE, MSCBotBulkIn);
+	USBHwRegisterEPIntHandler(BULK_OUT_EP, MAX_PACKET_SIZE, MSCBotBulkOut);
 
 	DBG("Starting USB communication\n");
 
