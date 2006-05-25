@@ -34,8 +34,11 @@
 
 #define BLOCKSIZE		512
 
-#define INVALID_FIELD_IN_CDB	0x052400
+// sense code
+#define WRITE_ERROR				0x030C00
+#define READ_ERROR				0x031100
 #define INVALID_CMD_OPCODE		0x052000
+#define INVALID_FIELD_IN_CDB	0x052400
 
 //	Sense code, which is set on error conditions
 static U32			dwSense;	// hex: 00aabbcc, where aa=KEY, bb=ASC, cc=ASCQ
@@ -98,7 +101,7 @@ void SCSIReset(void)
 	Returns TRUE if CDB is verified, FALSE otherwise.
 	If this call fails, a sense code is set in dwSense.
 **************************************************************************/
-BOOL SCSIHandleCmd(U8 *pbCDB, int iCDBLen, int *piRspLen, BOOL *pfDevIn)
+U8 * SCSIHandleCmd(U8 *pbCDB, int iCDBLen, int *piRspLen, BOOL *pfDevIn)
 {
 	int		i;
 	TCDB6	*pCDB;
@@ -115,44 +118,50 @@ BOOL SCSIHandleCmd(U8 *pbCDB, int iCDBLen, int *piRspLen, BOOL *pfDevIn)
 	case 0x00:
 		DBG("TEST UNIT READY\n");
 		*piRspLen = 0;
-		return TRUE;
+		break;
 	
 	// request sense (6)
 	case 0x03:
 		DBG("REQUEST SENSE (%06X)\n", dwSense);
 		// check params
 		*piRspLen = MIN(18, pCDB->bLength);
-		return TRUE;
+		break;
 	
 	// inquiry (6)
 	case 0x12:
 		DBG("INQUIRY\n");
 		// see SPC20r20, 4.3.4.6
 		*piRspLen = MIN(36, pCDB->bLength);
-		return TRUE;
+		break;
 		
 	// read capacity (10)
 	case 0x25:
 		DBG("READ CAPACITY\n");
 		*piRspLen = 8;
-		return TRUE;
+		break;
 		
 	// read (10)
 	case 0x28:
+		if (iCDBLen != 10) {
+			return NULL;
+		}
 		dwLBA = (pbCDB[2] << 24) | (pbCDB[3] << 16) | (pbCDB[4] << 8) | (pbCDB[5]);
 		dwLen = (pbCDB[7] << 8) | pbCDB[8];
 		DBG("READ10, LBA=%d, len=%d\n", dwLBA, dwLen);
 		*piRspLen = dwLen * BLOCKSIZE;
-		return TRUE;
+		break;
 
 	// write (10)
 	case 0x2A:
+		if (iCDBLen != 10) {
+			return NULL;
+		}
 		dwLBA = (pbCDB[2] << 24) | (pbCDB[3] << 16) | (pbCDB[4] << 8) | (pbCDB[5]);
 		dwLen = (pbCDB[7] << 8) | pbCDB[8];
 		DBG("WRITE10, LBA=%d, len=%d\n", dwLBA, dwLen);
 		*piRspLen = dwLen * BLOCKSIZE;
 		*pfDevIn = FALSE;
-		return TRUE;
+		break;
 
 	default:
 		DBG("Unhandled SCSI: ");		
@@ -163,8 +172,11 @@ BOOL SCSIHandleCmd(U8 *pbCDB, int iCDBLen, int *piRspLen, BOOL *pfDevIn)
 		// unsupported command
 		dwSense = INVALID_CMD_OPCODE;
 		*piRspLen = 0;
-		return FALSE;
+		return NULL;
 	}
+	
+	
+	return abBlockBuf;
 }
 
 
@@ -180,7 +192,7 @@ BOOL SCSIHandleCmd(U8 *pbCDB, int iCDBLen, int *piRspLen, BOOL *pfDevIn)
 	
 	Returns TRUE if the data was processed successfully
 **************************************************************************/
-BOOL SCSIHandleData(U8 *pbCDB, int iCDBLen, U8 *pbData, U32 dwOffset)
+U8 * SCSIHandleData(U8 *pbCDB, int iCDBLen, U8 *pbData, U32 dwOffset)
 {
 	TCDB6	*pCDB;
 	U32		dwLBA;
@@ -193,7 +205,10 @@ BOOL SCSIHandleData(U8 *pbCDB, int iCDBLen, U8 *pbData, U32 dwOffset)
 
 	// test unit ready
 	case 0x00:
-		return (dwSense == 0);
+		if (dwSense != 0) {
+			return NULL;
+		}
+		break;
 	
 	// request sense
 	case 0x03:
@@ -233,43 +248,45 @@ BOOL SCSIHandleData(U8 *pbCDB, int iCDBLen, U8 *pbData, U32 dwOffset)
 		dwLBA = (pbCDB[2] << 24) | (pbCDB[3] << 16) | (pbCDB[4] << 8) | (pbCDB[5]);
 
 		// copy data from block buffer
-		dwBufPos = (dwOffset & 511);
+		dwBufPos = (dwOffset & (BLOCKSIZE - 1));
 		if (dwBufPos == 0) {
 			// read new block
-			dwBlockNr = dwLBA + (dwOffset / 512);
+			dwBlockNr = dwLBA + (dwOffset / BLOCKSIZE);
 			DBG("R");
 			if (BlockDevRead(dwBlockNr, abBlockBuf) < 0) {
+				dwSense = READ_ERROR;
 				DBG("BlockDevRead failed\n");
-				return FALSE;
+				return NULL;
 			}
 		}
-		// inefficient but simple
-		memcpy(pbData, abBlockBuf + dwBufPos, 64);
-		break;
+		// return pointer to data
+		return abBlockBuf + dwBufPos;
 
 	// write10
 	case 0x2A:
 		dwLBA = (pbCDB[2] << 24) | (pbCDB[3] << 16) | (pbCDB[4] << 8) | (pbCDB[5]);
 		
 		// copy data to block buffer
-		dwBufPos = (dwOffset & 511);
-		memcpy(abBlockBuf + dwBufPos, pbData, 64);
-		if (dwBufPos == (512-64)) {
+		dwBufPos = ((dwOffset + 64) & (BLOCKSIZE - 1));
+		if (dwBufPos == 0) {
 			// write new block
-			dwBlockNr = dwLBA + (dwOffset / 512);
+			dwBlockNr = dwLBA + (dwOffset / BLOCKSIZE);
 			DBG("W");
 			if (BlockDevWrite(dwBlockNr, abBlockBuf) < 0) {
+				dwSense = WRITE_ERROR;
 				DBG("BlockDevWrite failed\n");
-				return FALSE;
+				return NULL;
 			}
 		}
-		break;
+		// return pointer to next data
+		return abBlockBuf + dwBufPos;
 		
 	default:
-		return FALSE;
+		return NULL;
 	}
 	
-	return TRUE;
+	// default: return pointer to start of block buffer
+	return abBlockBuf;
 }
 
 
