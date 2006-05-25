@@ -68,7 +68,7 @@ static TCSW			CSW;
 
 static EBotState	eState;
 
-static U8			abBotData[64];
+static U8			*pbData;
 
 
 
@@ -169,7 +169,8 @@ static void HandleDataIn(void)
 	int iChunk;
 	
 	// process data for host in SCSI layer
-	if (!SCSIHandleData(CBW.CBWCB, CBW.bCBWCBLength, abBotData, dwOffset)) {
+	pbData = SCSIHandleData(CBW.CBWCB, CBW.bCBWCBLength, pbData, dwOffset);
+	if (pbData == NULL) {
 		BOTStall();
 		SendCSW(STATUS_FAILED);
 		return;
@@ -178,7 +179,7 @@ static void HandleDataIn(void)
 	// send data to host?
 	if (dwOffset < dwTransferSize) {
 		iChunk = MIN(64, dwTransferSize - dwOffset);
-		USBHwEPWrite(BULK_IN_EP, abBotData, iChunk);
+		USBHwEPWrite(BULK_IN_EP, pbData, iChunk);
 		dwOffset += iChunk;
 	}
 	
@@ -205,13 +206,12 @@ static void HandleDataOut(void)
 {
 	int iChunk;
 	
-//	DBG(">");
-
 	if (dwOffset < dwTransferSize) {
 		// get data from host
-		iChunk = USBHwEPRead(BULK_OUT_EP, abBotData, dwTransferSize - dwOffset);
+		iChunk = USBHwEPRead(BULK_OUT_EP, pbData, dwTransferSize - dwOffset);
 		// process data in SCSI layer
-		if (!SCSIHandleData(CBW.CBWCB, CBW.bCBWCBLength, abBotData, dwOffset)) {
+		pbData = SCSIHandleData(CBW.CBWCB, CBW.bCBWCBLength, pbData, dwOffset);
+		if (pbData == NULL) {
 			BOTStall();
 			SendCSW(STATUS_FAILED);
 			return;
@@ -271,8 +271,9 @@ void MSCBotBulkOut(U8 bEP, U8 bEPStatus)
 		dwTransferSize = 0;
 		fHostIn = ((CBW.bmCBWFlags & 0x80) != 0);
 		
-		// handle request
-		if (!SCSIHandleCmd(CBW.CBWCB, CBW.bCBWCBLength, &iLen, &fDevIn)) {
+		// verify request
+		pbData = SCSIHandleCmd(CBW.CBWCB, CBW.bCBWCBLength, &iLen, &fDevIn);
+		if (pbData == NULL) {
 			// unknown command
 			BOTStall();
 			SendCSW(STATUS_FAILED);
@@ -291,7 +292,7 @@ void MSCBotBulkOut(U8 bEP, U8 bEPStatus)
 
 		// rule: if D > H, send CSW with status 2
 		if (iLen > CBW.dwCBWDataTransferLength) {
-			DBG("Positive residue\n");
+			DBG("Negative residue\n");
 			BOTStall();
 			SendCSW(STATUS_PHASE_ERR);
 			break;
