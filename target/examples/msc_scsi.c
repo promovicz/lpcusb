@@ -93,13 +93,15 @@ void SCSIReset(void)
 		Verifies a SCSI CDB and indicates the direction and amount of data
 		that the device wants to transfer.
 		
+	If this call fails, a sense code is set in dwSense.
+
 	IN		pbCDB		Command data block
 			iCDBLen		Command data block len
 	OUT		*piRspLen	Length of intended response data:
 			*pfDevIn	TRUE if data is transferred from device-to-host
 	
-	Returns TRUE if CDB is verified, FALSE otherwise.
-	If this call fails, a sense code is set in dwSense.
+	Returns a pointer to the data exchange buffer if successful,
+	return NULL otherwise.
 **************************************************************************/
 U8 * SCSIHandleCmd(U8 *pbCDB, int iCDBLen, int *piRspLen, BOOL *pfDevIn)
 {
@@ -190,7 +192,8 @@ U8 * SCSIHandleCmd(U8 *pbCDB, int iCDBLen, int *piRspLen, BOOL *pfDevIn)
 	IN/OUT	pbData		Data buffer
 	IN		dwOffset	Offset in data
 	
-	Returns TRUE if the data was processed successfully
+	Returns a pointer to the next data to be exchanged if successful,
+	returns NULL otherwise.
 **************************************************************************/
 U8 * SCSIHandleData(U8 *pbCDB, int iCDBLen, U8 *pbData, U32 dwOffset)
 {
@@ -282,6 +285,8 @@ U8 * SCSIHandleData(U8 *pbCDB, int iCDBLen, U8 *pbData, U32 dwOffset)
 		return abBlockBuf + dwBufPos;
 		
 	default:
+		// unsupported command
+		dwSense = INVALID_CMD_OPCODE;
 		return NULL;
 	}
 	
