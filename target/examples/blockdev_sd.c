@@ -35,26 +35,31 @@
 
 
 
-#define	CMDREADCSD       	9
-#define CMDREADCID			10
-#define	CMDREAD				17
-#define	CMDWRITE			24
-#define CMDWRITE_MULTIPLE	25
+#define CMD_GOIDLESTATE		0
+#define CMD_SENDOPCOND		1
+#define	CMD_READCSD       	9
+#define CMD_READCID			10
+#define CMD_SENDSTATUS		13
+#define	CMD_READSINGLEBLOCK	17
+#define	CMD_WRITE			24
+#define CMD_WRITE_MULTIPLE	25
 
 
-static void Command(U8 cmd, U16 paramx, U16 paramy)
+static void Command(U8 cmd, U32 param)
 {
-	SPISend(0xff);
+	U8	abCmd[8];
 
-	SPISend(0x40 | cmd);
-	SPISend((U8) (paramx >> 8));	/* MSB of parameter x */
-	SPISend((U8) (paramx));	/* LSB of parameter x */
-	SPISend((U8) (paramy >> 8));	/* MSB of parameter y */
-	SPISend((U8) (paramy));	/* LSB of parameter y */
+	// create buffer
+	abCmd[0] = 0xff;
+	abCmd[1] = 0x40 | cmd;
+	abCmd[2] = (U8)(param >> 24);
+	abCmd[3] = (U8)(param >> 16);
+	abCmd[4] = (U8)(param >> 8);
+	abCmd[5] = (U8)(param);
+	abCmd[6] = 0x95;			/* Checksum (should be only valid for first command (0) */
+	abCmd[7] = 0xff;			/* eat empty command - response */
 
-	SPISend(0x95);			/* Checksum (should be only valid for first command (0) */
-
-	SPISend(0xff);			/* eat empty command - response */
+	SPISendN(abCmd, 8);
 }
 
 
@@ -105,15 +110,14 @@ int BlockDevGetSize(U32 *pdwDriveSize)
 	U8 iob[16];
 	U16 c_size, c_size_mult, read_bl_len;
 
-	Command(CMDREADCSD, 0, 0);
-
+	Command(CMD_READCSD, 0);
 	do {
 		cardresp = Resp8b();
 	} while (cardresp != 0xFE);
 
 	DBG((("CSD:")));
 	for (i = 0; i < 16; i++) {
-		iob[i] = Resp8b();
+		iob[i] = SPISend(0xFF);
 		DBG(" %02x", iob[i]);
 	}
 	DBG((("\n")));
@@ -160,7 +164,7 @@ static int State(void)
 {
 	U16 value;
 
-	Command(13, 0, 0);
+	Command(CMD_SENDSTATUS, 0);
 	value = Resp16b();
 
 	switch (value) {
@@ -198,7 +202,7 @@ int BlockDevInit(void)
 	/* Try to send reset command up to 100 times */
 	i = 100;
 	do {
-		Command(0, 0, 0);
+		Command(CMD_GOIDLESTATE, 0);
 		resp = Resp8b();
 	} while (resp != 1 && i--);
 
@@ -214,11 +218,11 @@ int BlockDevInit(void)
 		}
 	}
 
-	/* Wait till card is ready initialising (returns 0 on CMD1) */
+	/* Wait till card is ready initialising (returns 0 on CMD_1) */
 	/* Try up to 32000 times. */
 	i = 32000;
 	do {
-		Command(1, 0, 0);
+		Command(CMD_SENDOPCOND, 0);
 
 		resp = Resp8b();
 		if (resp != 0) {
@@ -255,7 +259,7 @@ int BlockDevInit(void)
 
 /* ****************************************************************************
  * WAIT ?? -- FIXME
- * CMDWRITE
+ * CMD_WRITE
  * WAIT
  * CARD RESP
  * WAIT
@@ -272,7 +276,7 @@ int BlockDevWrite(U32 dwAddress, U8 * pbBuf)
 	U16 t = 0;
 
 	place = 512 * dwAddress;
-	Command(CMDWRITE, (U16) (place >> 16), (U16) place);
+	Command(CMD_WRITE, place);
 
 	Resp8b();				/* Card response */
 
@@ -294,7 +298,7 @@ int BlockDevWrite(U32 dwAddress, U8 * pbBuf)
 
 /* ****************************************************************************
  * WAIT ?? -- FIXME
- * CMDCMD
+ * CMD_CMD_
  * WAIT
  * CARD RESP
  * WAIT
@@ -312,7 +316,7 @@ int BlockDevRead(U32 dwAddress, U8 * pbBuf)
 	U32 place;
 
 	place = 512 * dwAddress;
-	Command(CMDREAD, (U16) (place >> 16), (U16) place);
+	Command(CMD_READSINGLEBLOCK, place);
 
 	cardresp = Resp8b();		/* Card response */
 
