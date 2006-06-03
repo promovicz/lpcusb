@@ -1,3 +1,11 @@
+v20060603
+	20060530, bertrik
+	* startup.c: Updated order of setting MAMTIM and MAMCR.
+	  MAMTIM is now set to 3 as suggested in the user manual.
+
+	20060526, bertrik
+	* Eliminated copying data around in mass storage example
+	
 	20060512, bertrik
 	* Added mass storage application example (using the SD card interface from EFSL).
 	* usbhw_lpc.c: Added function USBHwNakIntEnable
