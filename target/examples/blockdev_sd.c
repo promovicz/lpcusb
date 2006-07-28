@@ -115,12 +115,12 @@ int BlockDevGetSize(U32 *pdwDriveSize)
 		cardresp = Resp8b();
 	} while (cardresp != 0xFE);
 
-	DBG((("CSD:")));
+	DBG("CSD:");
 	for (i = 0; i < 16; i++) {
 		iob[i] = SPISend(0xFF);
 		DBG(" %02x", iob[i]);
 	}
-	DBG((("\n")));
+	DBG("\n");
 
 	SPISend(0xff);
 	SPISend(0xff);
@@ -239,11 +239,11 @@ int BlockDevInit(void)
 	SPISetSpeed(SPI_PRESCALE_MIN);
 
 	if (State() < 0) {
-		DBG((("Card didn't return the ready state, breaking up...\n")));
+		DBG("Card didn't return the ready state, breaking up...\n");
 		return -2;
 	}
 
-	DBG((("Init done...\n")));
+	DBG("Init done...\n");
 
 	return 0;
 }
