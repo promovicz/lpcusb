@@ -144,14 +144,13 @@ void USBHandleControlTransfer(U8 bEP, U8 bEPStat)
 
 	if (bEP == 0x00) {
 		// OUT transfer
-		iType = REQTYPE_GET_TYPE(Setup.bmRequestType);
-
 		if (bEPStat & EP_STATUS_SETUP) {
 			// setup packet, reset request message state machine
 			USBHwEPRead(0x00, (U8 *)&Setup, sizeof(Setup));
 			DBG("S%x", Setup.bRequest);
 
 			// defaults for data pointer and residue
+			iType = REQTYPE_GET_TYPE(Setup.bmRequestType);
 			pbData = apbDataStore[iType];
 			iResidue = Setup.wLength;
 			iLen = Setup.wLength;
@@ -182,6 +181,7 @@ void USBHandleControlTransfer(U8 bEP, U8 bEPStat)
 				iResidue -= iChunk;
 				if (iResidue == 0) {
 					// received all, send data to handler
+					iType = REQTYPE_GET_TYPE(Setup.bmRequestType);
 					pbData = apbDataStore[iType];
 					if (!_HandleRequest(&Setup, &iLen, &pbData)) {
 						DBG("_HandleRequest2 failed\n");
