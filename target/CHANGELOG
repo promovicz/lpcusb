@@ -1,3 +1,8 @@
+v20070729
+	20070729, bertrik
+	* Fixed bug with uninitialised variable (iType) in usbcontrol.c
+	* Minor cosmetic cleanup
+
 v20060603
 	20060530, bertrik
 	* startup.c: Updated order of setting MAMTIM and MAMCR.
