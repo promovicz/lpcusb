@@ -79,8 +79,8 @@
 
 #define SPI_PRESCALE_REG  S0SPCCR
 
-#define SELECT_CARD()   IOCLR0 = (1<<SPI_SS_PIN)
-#define UNSELECT_CARD()	IOSET0 = (1<<SPI_SS_PIN)
+#define SELECT_CARD()   IOCLR0 = (1 << SPI_SS_PIN)
+#define UNSELECT_CARD() IOSET0 = (1 << SPI_SS_PIN)
 
 
 
@@ -157,31 +157,31 @@ U8 SPISend(U8 outgoing)
 	incoming = S0SPDR;
 	UNSELECT_CARD();
 
-	return (incoming);
+	return incoming;
 }
 
 
-void SPISendN(U8 *pbBuf, int iLen)
+void SPISendN(U8 * pbBuf, int iLen)
 {
 	int i;
-	
+
 	SELECT_CARD();
 	for (i = 0; i < iLen; i++) {
 		S0SPDR = pbBuf[i];
-		while( !(S0SPSR & (1<<SPIF)) ) ;
+		while (!(S0SPSR & (1 << SPIF)));
 	}
 	UNSELECT_CARD();
 }
 
 
-void SPIRecvN(U8 *pbBuf, int iLen)
+void SPIRecvN(U8 * pbBuf, int iLen)
 {
 	int i;
-	
+
 	SELECT_CARD();
 	for (i = 0; i < iLen; i++) {
 		S0SPDR = 0xFF;
-		while( !(S0SPSR & (1<<SPIF)) ) ;
+		while (!(S0SPSR & (1 << SPIF)));
 		pbBuf[i] = S0SPDR;
 	}
 	UNSELECT_CARD();
