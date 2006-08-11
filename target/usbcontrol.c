@@ -50,31 +50,31 @@
 #define	MAX_CONTROL_SIZE	128	/**< maximum total size of control transfer data */
 #define	MAX_REQ_HANDLERS	4	/**< standard, class, vendor, reserved */
 
-static TSetupPacket		Setup;
+static TSetupPacket		Setup;	/**< setup packet */
 
-static U8				*pbData;	// pointer to data buffer
-static int				iResidue;		// remaining bytes in buffer
-static int				iLen;		// total length of control transfer
+static U8				*pbData;	/**< pointer to data buffer */
+static int				iResidue;	/**< remaining bytes in buffer */
+static int				iLen;		/**< total length of control transfer */
 
+/** Array of installed request handler callbacks */
 static TFnHandleRequest *apfnReqHandlers[4] = {NULL, NULL, NULL, NULL};
+/** Array of installed request data pointers */
 static U8				*apbDataStore[4] = {NULL, NULL, NULL, NULL};
 
-/*************************************************************************
-	_HandleRequest
-	==============
-		Local function to handle a request by calling one of the installed
-		request handlers.
+/**
+	Local function to handle a request by calling one of the installed
+	request handlers.
 		
 	In case of data going from host to device, the data is at *ppbData.
 	In case of data going from device to host, the handler can either
 	choose to write its data at *ppbData or update the data pointer.
 		
-	@param pSetup		The setup packet
-	IN/OUT	*piLen		Pointer to data length
-			ppbData		Data buffer.
+	@param [in]		pSetup		The setup packet
+	@param [in,out]	*piLen		Pointer to data length
+	@param [in,out]	ppbData		Data buffer.
 
-	Returns TRUE if the request was handles successfully
-**************************************************************************/
+	@return TRUE if the request was handles successfully
+ */
 static BOOL _HandleRequest(TSetupPacket *pSetup, int *piLen, U8 **ppbData)
 {
 	TFnHandleRequest *pfnHandler;
@@ -91,12 +91,11 @@ static BOOL _HandleRequest(TSetupPacket *pSetup, int *piLen, U8 **ppbData)
 }
 
 
-/*************************************************************************
-	StallControlPipe
-	================
-		Local function to stall the control endpoint
-
-**************************************************************************/
+/**
+	Local function to stall the control endpoint
+	
+	@param [in]	bEPStat	Endpoint status
+ */
 static void StallControlPipe(U8 bEPStat)
 {
 	U8	*pb;
@@ -114,12 +113,9 @@ static void StallControlPipe(U8 bEPStat)
 }
 
 
-/*************************************************************************
-	DataIn
-	======
-		Sends next chunk of data (possibly 0 bytes) to host
-
-**************************************************************************/
+/**
+	Sends next chunk of data (possibly 0 bytes) to host
+ */
 static void DataIn(void)
 {
 	int iChunk;

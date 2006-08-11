@@ -42,10 +42,11 @@
 #define DEBUG_LED_OFF(x)	/**< turn LED off */
 #endif
 
-// local data
-
+/** Installed device interrupt handler */
 static TFnDevIntHandler *_pfnDevIntHandler = NULL;
+/** Installed endpoint interrupt handlers */
 static TFnEPIntHandler	*_apfnEPIntHandlers[16];
+/** Installed frame interrupt handlers */
 static TFnFrameHandler	*_pfnFrameHandler = NULL;
 
 /** convert from endpoint address to endpoint index */
@@ -55,14 +56,11 @@ static TFnFrameHandler	*_pfnFrameHandler = NULL;
 
 
 
-/*************************************************************************
-	Wait4DevInt
-	===========
-		Local function to wait for a device interrupt (and clear it)
+/**
+	Local function to wait for a device interrupt (and clear it)
 		
-	IN		dwIntr		Interrupts to wait for	
-
-**************************************************************************/
+	@param [in]	dwIntr		Interrupts to wait for	
+ */
 static void Wait4DevInt(U32 dwIntr)
 {
 	while ((USBDevIntSt & dwIntr) != dwIntr);
@@ -70,14 +68,11 @@ static void Wait4DevInt(U32 dwIntr)
 }
 
 
-/*************************************************************************
-	USBHwCmd
-	========
-		Local function to send a command to the USB protocol engine
+/**
+	Local function to send a command to the USB protocol engine
 		
-	IN		bCmd		Command to send
-
-**************************************************************************/
+	@param [in]	bCmd		Command to send
+ */
 static void USBHwCmd(U8 bCmd)
 {
 	// clear CDFULL/CCEMTY
@@ -88,15 +83,12 @@ static void USBHwCmd(U8 bCmd)
 }
 
 
-/*************************************************************************
-	USBHwCmdWrite
-	=============
-		Local function to send a command + data to the USB protocol engine
+/**
+	Local function to send a command + data to the USB protocol engine
 		
-	IN		bCmd		Command to send
-			bData		Data to send
-
-**************************************************************************/
+	@param [in]	bCmd		Command to send
+	@param [in]	bData		Data to send
+ */
 static void USBHwCmdWrite(U8 bCmd, U16 bData)
 {
 	// write command code
@@ -108,16 +100,13 @@ static void USBHwCmdWrite(U8 bCmd, U16 bData)
 }
 
 
-/*************************************************************************
-	USBHwCmdRead
-	============
-		Local function to send a command to the USB protocol engine
-		and read data
+/**
+	Local function to send a command to the USB protocol engine and read data
 		
-	IN		bCmd		Command to send
+	@param [in]	bCmd		Command to send
 
-	Returns the data
-**************************************************************************/
+	@return the data
+ */
 static U8 USBHwCmdRead(U8 bCmd)
 {
 	// write command code
@@ -130,19 +119,17 @@ static U8 USBHwCmdRead(U8 bCmd)
 }
 
 
-/*************************************************************************
-	USBHwEPRealize
-	==============
-		'Realizes' an endpoint, meaning that buffer space is reserved for
-		it. An endpoint needs to be realised before it can be used.
+/**
+	'Realizes' an endpoint, meaning that buffer space is reserved for
+	it. An endpoint needs to be realised before it can be used.
 		
 	From experiments, it appears that a USB reset causes USBReEP to
 	re-initialise to 3 (= just the control endpoints).
 	However, a USB bus reset does not disturb the USBMaxPSize settings.
 		
-	IN		bEP		Endpoint number
-
-**************************************************************************/
+	@param [in]	idx			Endpoint index
+	@param [in] wMaxPSize	Maximum packet size for this endpoint
+ */
 static void USBHwEPRealize(int idx, U16 wMaxPSize)
 {
 	USBReEP |= (1 << idx);
@@ -152,15 +139,12 @@ static void USBHwEPRealize(int idx, U16 wMaxPSize)
 }
 
 
-/*************************************************************************
-	USBHwEPEnable
-	=============
-		Enables or disables an endpoint
+/**
+	Enables or disables an endpoint
 		
-	IN		bEP		Endpoint number
-			fEnable	TRUE to enable, FALSE to disable
-
-**************************************************************************/
+	@param [in]	idx		Endpoint index
+	@param [in]	fEnable	TRUE to enable, FALSE to disable
+ */
 static void USBHwEPEnable(int idx, BOOL fEnable)
 {
 	USBHwCmdWrite(CMD_EP_SET_STATUS | idx, fEnable ? 0 : EP_DA);

@@ -27,6 +27,7 @@
 
 #include "usbapi.h"
 
+/** Pointer to registered descriptors */
 static const U8	*pabDescrip = NULL;
 
 

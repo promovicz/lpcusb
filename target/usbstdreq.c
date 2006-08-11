@@ -27,12 +27,12 @@
 	Specific types of devices may specify additional requests (for example
 	HID devices add a GET_DESCRIPTOR request for interfaces), but they
 	will not be part of this module.
-*/
 
-// @TODO some requests have to return a request error if device not configured:
-// @TODO GET_INTERFACE, GET_STATUS, SET_INTERFACE, SYNCH_FRAME
-// @TODO this applies to the following if endpoint != 0:
-// @TODO SET_FEATURE, GET_FEATURE 
+	@todo some requests have to return a request error if device not configured:
+	@todo GET_INTERFACE, GET_STATUS, SET_INTERFACE, SYNCH_FRAME
+	@todo this applies to the following if endpoint != 0:
+	@todo SET_FEATURE, GET_FEATURE 
+*/
 
 #include "type.h"
 #include "usbdebug.h"
@@ -41,21 +41,20 @@
 
 #define MAX_DESC_HANDLERS	4		/**< device, interface, endpoint, other */
 
-// device state info
+/** Currently selected configuration */
 static U8				bConfiguration = 0;
+/** Installed custom request handler */
 static TFnHandleRequest	*pfnHandleCustomReq = NULL;
 
-/*************************************************************************
-	HandleStdDeviceReq
-	==================
-		Local function to handle a standard device request
+/**
+	Local function to handle a standard device request
 		
-	IN		pSetup		The setup packet
-	IN/OUT	*piLen		Pointer to data length
-			ppbData		Data buffer.
+	@param [in]		pSetup		The setup packet
+	@param [in,out]	*piLen		Pointer to data length
+	@param [in,out]	ppbData		Data buffer.
 
-	Returns TRUE if the request was handled successfully
-**************************************************************************/
+	@return TRUE if the request was handled successfully
+ */
 static BOOL HandleStdDeviceReq(TSetupPacket *pSetup, int *piLen, U8 **ppbData)
 {
 	U8	*pbData = *ppbData;
@@ -112,17 +111,15 @@ static BOOL HandleStdDeviceReq(TSetupPacket *pSetup, int *piLen, U8 **ppbData)
 }
 
 
-/*************************************************************************
-	HandleStdInterfaceReq
-	=====================
-		Local function to handle a standard interface request
+/**
+	Local function to handle a standard interface request
 		
-	IN		pSetup		The setup packet
-	IN/OUT	*piLen		Pointer to data length
-			ppbData		Data buffer.
+	@param [in]		pSetup		The setup packet
+	@param [in,out]	*piLen		Pointer to data length
+	@param [in]		ppbData		Data buffer.
 
-	Returns TRUE if the request was handled successfully
-**************************************************************************/
+	@return TRUE if the request was handled successfully
+ */
 static BOOL HandleStdInterfaceReq(TSetupPacket	*pSetup, int *piLen, U8 **ppbData)
 {
 	U8	*pbData = *ppbData;
@@ -164,17 +161,15 @@ static BOOL HandleStdInterfaceReq(TSetupPacket	*pSetup, int *piLen, U8 **ppbData
 }
 
 
-/*************************************************************************
-	HandleStdEndPointReq
-	====================
-		Local function to handle a standard endpoint request
+/**
+	Local function to handle a standard endpoint request
 		
-	IN		pSetup		The setup packet
-	IN/OUT	*piLen		Pointer to data length
-			ppbData		Data buffer.
+	@param [in]		pSetup		The setup packet
+	@param [in,out]	*piLen		Pointer to data length
+	@param [in]		ppbData		Data buffer.
 
-	Returns TRUE if the request was handled successfully
-**************************************************************************/
+	@return TRUE if the request was handled successfully
+ */
 static BOOL HandleStdEndPointReq(TSetupPacket	*pSetup, int *piLen, U8 **ppbData)
 {
 	U8	*pbData = *ppbData;

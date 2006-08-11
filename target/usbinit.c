@@ -26,14 +26,15 @@
 #include "usbapi.h"
 
 
-// data storage area for standard requests
+/** data storage area for standard requests */
 static U8	abStdReqData[8];
 
 
-/*************************************************************************
-	HandleUsbReset
-	==============
-**************************************************************************/
+/**
+	USB reset handler
+	
+	@param [in] bDevStatus	Device status
+ */
 static void HandleUsbReset(U8 bDevStatus)
 {
 	if (bDevStatus & DEV_STATUS_RESET) {
