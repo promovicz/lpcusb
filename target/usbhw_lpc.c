@@ -17,6 +17,10 @@
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
+/** @file
+	USB hardware layer
+ */
+
 #include "type.h"
 #include "usbdebug.h"
 #include "usbhw_lpc.h"
@@ -33,9 +37,9 @@
 #define DEBUG_LED_OFF(x)	IOSET0 = (1 << x);
 #define DEBUG_LED_INIT(x)	PINSEL0 &= ~(0x3 << (2*x)); IODIR0 |= (1 << x); DEBUG_LED_OFF(x);
 #else
-#define DEBUG_LED_INIT(x)
-#define DEBUG_LED_ON(x)
-#define DEBUG_LED_OFF(x)
+#define DEBUG_LED_INIT(x)	/**< LED initialisation macro */
+#define DEBUG_LED_ON(x)		/**< turn LED on */
+#define DEBUG_LED_OFF(x)	/**< turn LED off */
 #endif
 
 // local data
@@ -44,8 +48,9 @@ static TFnDevIntHandler *_pfnDevIntHandler = NULL;
 static TFnEPIntHandler	*_apfnEPIntHandlers[16];
 static TFnFrameHandler	*_pfnFrameHandler = NULL;
 
-// convert from endpoint address to endpoint index (and vice versa)
+/** convert from endpoint address to endpoint index */
 #define EP2IDX(bEP)	((((bEP)&0xF)<<1)|(((bEP)&0x80)>>7))
+/** convert from endpoint index to endpoint address */
 #define IDX2EP(idx)	((((idx)<<7)&0x80)|(((idx)>>1)&0xF))
 
 
@@ -162,16 +167,13 @@ static void USBHwEPEnable(int idx, BOOL fEnable)
 }
 
 
-/*************************************************************************
-	USBHwRegisterEPIntHandler
-	=========================
-		Registers an endpoint event callback
+/**
+	Registers an endpoint event callback
 		
-	IN		bEP				Endpoint number
-			wMaxPacketSize	Maximum packet size for this endpoint
-			pfnHandler		Callback function
-
-**************************************************************************/
+	@param [in]	bEP				Endpoint number
+	@param [in]	wMaxPacketSize	Maximum packet size for this endpoint
+	@param [in]	pfnHandler		Callback function
+ */
 void USBHwRegisterEPIntHandler(U8 bEP, U16 wMaxPacketSize, TFnEPIntHandler *pfnHandler)
 {
 	int idx;
@@ -194,14 +196,11 @@ void USBHwRegisterEPIntHandler(U8 bEP, U16 wMaxPacketSize, TFnEPIntHandler *pfnH
 }
 
 
-/*************************************************************************
-	USBHwRegisterDevIntHandler
-	==========================
-		Registers an device status callback
+/**
+	Registers an device status callback
 		
-	IN		pfnHandler	Callback function
-
-**************************************************************************/
+	@param [in]	pfnHandler	Callback function
+ */
 void USBHwRegisterDevIntHandler(TFnDevIntHandler *pfnHandler)
 {
 	_pfnDevIntHandler = pfnHandler;
@@ -213,14 +212,11 @@ void USBHwRegisterDevIntHandler(TFnDevIntHandler *pfnHandler)
 }
 
 
-/*************************************************************************
-	USBHwRegisterFrameHandler
-	=========================
-		Registers the frame callback
+/**
+	Registers the frame callback
 		
-	IN		pfnHandler	Callback function
-
-**************************************************************************/
+	@param [in]	pfnHandler	Callback function
+ */
 void USBHwRegisterFrameHandler(TFnFrameHandler *pfnHandler)
 {
 	_pfnFrameHandler = pfnHandler;
@@ -232,38 +228,30 @@ void USBHwRegisterFrameHandler(TFnFrameHandler *pfnHandler)
 }
 
 
-/*************************************************************************
-	USBHwSetAddress
-	===============
-		Sets the USB address.
+/**
+	Sets the USB address.
 		
-	IN		bAddr		Device address to set
-
-**************************************************************************/
+	@param [in]	bAddr		Device address to set
+ */
 void USBHwSetAddress(U8 bAddr)
 {
 	USBHwCmdWrite(CMD_DEV_SET_ADDRESS, DEV_EN | bAddr);
 }
 
 
-/*************************************************************************
-	USBHwConnect
-	============
-		Connects or disconnects from the USB bus
+/**
+	Connects or disconnects from the USB bus
 		
-	IN		fConnect	If TRUE, connect, otherwise disconnect
-
-**************************************************************************/
+	@param [in]	fConnect	If TRUE, connect, otherwise disconnect
+ */
 void USBHwConnect(BOOL fConnect)
 {
 	USBHwCmdWrite(CMD_DEV_STATUS, fConnect ? CON : 0);
 }
 
 
-/*************************************************************************
-	USBHwNackIntEnable
-	==================
-		Enables interrupt on NAK condition
+/**
+	Enables interrupt on NAK condition
 		
 	For IN endpoints a NAK is generated when the host wants to read data
 	from the device, but none is available in the endpoint buffer.
@@ -273,24 +261,21 @@ void USBHwConnect(BOOL fConnect)
 	The endpoint interrupt handlers can distinguish regular (ACK) interrupts
 	from NAK interrupt by checking the bits in their bEPStatus argument.
 	
-	IN		bIntBits	Bitmap indicating which NAK interrupts to enable
-
-**************************************************************************/
+	@param [in]	bIntBits	Bitmap indicating which NAK interrupts to enable
+ */
 void USBHwNakIntEnable(U8 bIntBits)
 {
 	USBHwCmdWrite(CMD_DEV_SET_MODE, bIntBits);
 }
 
 
-/*************************************************************************
-	USBHwEPIsStalled
-	================
-		Gets the stalled property of an endpoint
+/**
+	Gets the stalled property of an endpoint
 		
-	IN		bEP		Endpoint number
+	@param [in]	bEP		Endpoint number
 			
-	Returns TRUE if stalled, FALSE if not stalled
-**************************************************************************/
+	@return TRUE if stalled, FALSE if not stalled
+ */
 BOOL USBHwEPIsStalled(U8 bEP)
 {
    	int idx = EP2IDX(bEP);
@@ -299,15 +284,12 @@ BOOL USBHwEPIsStalled(U8 bEP)
 }
 
 
-/*************************************************************************
-	USBHwEPStall
-	============
-		Sets the stalled property of an endpoint
+/**
+	Sets the stalled property of an endpoint
 		
-	IN		bEP		Endpoint number
-			fStall	TRUE to stall, FALSE to unstall
-			
-**************************************************************************/
+	@param [in]	bEP		Endpoint number
+	@param [in]	fStall	TRUE to stall, FALSE to unstall
+ */
 void USBHwEPStall(U8 bEP, BOOL fStall)
 {
 	int idx = EP2IDX(bEP);
@@ -316,18 +298,15 @@ void USBHwEPStall(U8 bEP, BOOL fStall)
 }
 
 
-/*************************************************************************
-	USBHwEPWrite
-	============
-		Writes data to an endpoint buffer
+/**
+	Writes data to an endpoint buffer
 		
-	IN		bEP		Endpoint number
-			pbBuf	Endpoint data
-			iLen	Number of bytes to write
+	@param [in]	bEP		Endpoint number
+	@param [in]	pbBuf	Endpoint data
+	@param [in]	iLen	Number of bytes to write
 			
-	Returns TRUE if the data was successfully written
-	or <0 in case of error.
-**************************************************************************/
+	@return TRUE if the data was successfully written or <0 in case of error.
+*/
 int USBHwEPWrite(U8 bEP, U8 *pbBuf, int iLen)
 {
 	int idx;
@@ -357,18 +336,16 @@ int USBHwEPWrite(U8 bEP, U8 *pbBuf, int iLen)
 }
 
 
-/*************************************************************************
-	USBHwEPRead
-	============
-		Reads data from an endpoint buffer
+/**
+	Reads data from an endpoint buffer
 		
-	IN		bEP		Endpoint number
-			pbBuf	Endpoint data
-			iMaxLen	Maximum number of bytes to read
+	@param [in]	bEP		Endpoint number
+	@param [in]	pbBuf	Endpoint data
+	@param [in]	iMaxLen	Maximum number of bytes to read
 			
-	Returns the number of bytes available in the EP (possibly more than iMaxLen),
+	@return the number of bytes available in the EP (possibly more than iMaxLen),
 	or <0 in case of error.
-**************************************************************************/
+ */
 int USBHwEPRead(U8 bEP, U8 *pbBuf, int iMaxLen)
 {
 	int i, idx;
@@ -416,17 +393,14 @@ int USBHwEPRead(U8 bEP, U8 *pbBuf, int iMaxLen)
 }
 
 
-/*************************************************************************
-	USBHwConfigDevice
-	=================
-		Sets the 'configured' state.
+/**
+	Sets the 'configured' state.
 		
 	All registered endpoints are 'realised' and enabled, and the
 	'configured' bit is set in the device status register.
 		
-	IN		fConfigure	If TRUE, configure device, else unconfigure
-
-**************************************************************************/
+	@param [in]	fConfigured	If TRUE, configure device, else unconfigure
+ */
 void USBHwConfigDevice(BOOL fConfigured)
 {
 	int i;
@@ -446,17 +420,13 @@ void USBHwConfigDevice(BOOL fConfigured)
 }
 
 
-/*************************************************************************
-	USBHwISR
-	========
-		USB interrupt handler
+/**
+	USB interrupt handler
 		
-	Interrupt mapping:
-	* endpoint interrupts are mapped to the slow interrupt
+	Endpoint interrupts are mapped to the slow interrupt
 	
-	TODO: should we cause interrupt on NAK?
-
-**************************************************************************/
+	\todo should we cause interrupt on NAK?
+ */
 void USBHwISR(void)
 {
 	U32	dwStatus, dwEPIntStat;
@@ -527,10 +497,8 @@ DEBUG_LED_OFF(10);
 
 
 
-/*************************************************************************
-	USBHwInit
-	=========
-		Initialises the USB hardware
+/**
+	Initialises the USB hardware
 		
 	This function assumes that the hardware is connected as shown in
 	section 10.1 of the LPC2148 data sheet:
@@ -540,8 +508,8 @@ DEBUG_LED_OFF(10);
 	Embedded artists board: make sure to disconnect P0.23 LED as it
 	acts as a pull-up and so prevents detection of USB disconnect.
 		
-	Returns TRUE if the hardware was successfully initialised
-**************************************************************************/
+	@return TRUE if the hardware was successfully initialised
+ */
 BOOL USBHwInit(void)
 {
 	// configure P0.23 for Vbus sense
@@ -587,10 +555,5 @@ BOOL USBHwInit(void)
 	DEBUG_LED_INIT(10);
 
 	return TRUE;
-}
-
-
-void USBHwReset(void)
-{
 }
 

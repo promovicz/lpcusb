@@ -17,7 +17,7 @@
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-/*
+/** @file
 	Control transfer handler.
 
 	In case of a control-write (host-to-device), this module collects the full
@@ -46,10 +46,9 @@
 #include "usbapi.h"
 
 
-// maximum total size of control transfer data
-#define	MAX_CONTROL_SIZE	128
 
-#define	MAX_REQ_HANDLERS	4	// standard, class, vendor, reserved
+#define	MAX_CONTROL_SIZE	128	/**< maximum total size of control transfer data */
+#define	MAX_REQ_HANDLERS	4	/**< standard, class, vendor, reserved */
 
 static TSetupPacket		Setup;
 
@@ -70,7 +69,7 @@ static U8				*apbDataStore[4] = {NULL, NULL, NULL, NULL};
 	In case of data going from device to host, the handler can either
 	choose to write its data at *ppbData or update the data pointer.
 		
-	IN		pSetup		The setup packet
+	@param pSetup		The setup packet
 	IN/OUT	*piLen		Pointer to data length
 			ppbData		Data buffer.
 
@@ -132,12 +131,12 @@ static void DataIn(void)
 }
 
 
-/*************************************************************************
-	USBHandleControlTransfer
-	========================
-		Handles IN/OUT transfers on EP0
-
-**************************************************************************/
+/**
+ *	Handles IN/OUT transfers on EP0
+ *
+ *	@param [in]	bEP		Endpoint address
+ *	@param [in]	bEPStat	Endpoint status
+ */
 void USBHandleControlTransfer(U8 bEP, U8 bEPStat)
 {
 	int iChunk, iType;
@@ -210,16 +209,13 @@ void USBHandleControlTransfer(U8 bEP, U8 bEPStat)
 }
 
 
-/*************************************************************************
-	USBRegisterRequestHandler
-	=========================
-		Registers a callback for handling requests
+/**
+	Registers a callback for handling requests
 		
-	IN		iType			Type of request, e.g. REQTYPE_TYPE_STANDARD
-			*pfnHandler		Callback function pointer
-			*pbDataStore	Data storage area for this type of request
-
-**************************************************************************/
+	@param [in]	iType			Type of request, e.g. REQTYPE_TYPE_STANDARD
+	@param [in]	*pfnHandler		Callback function pointer
+	@param [in]	*pbDataStore	Data storage area for this type of request
+ */
 void USBRegisterRequestHandler(int iType, TFnHandleRequest *pfnHandler, U8 *pbDataStore)
 {
 	ASSERT(iType >= 0);

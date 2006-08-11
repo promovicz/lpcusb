@@ -1,4 +1,4 @@
-/*
+/**
 	(c) 2006, Bertrik Sikken, bertrik@sikken.nl
 
 	definitions of structure of standard USB packets
@@ -11,15 +11,13 @@
 #include "type.h"
 
 
-/*
-	setup packet definitions
-*/
+/** setup packet definitions */
 typedef struct {
-	U8	bmRequestType;
-	U8	bRequest;
-	U16	wValue;
-	U16	wIndex;
-	U16	wLength;
+	U8	bmRequestType;			/**< characteristics of the specific request */
+	U8	bRequest;				/**< specific request */
+	U16	wValue;					/**< request specific parameter */
+	U16	wIndex;					/**< request specific parameter */
+	U16	wLength;				/**< length of data transfered in data phase */
 } TSetupPacket;
 
 
@@ -70,9 +68,10 @@ typedef struct {
 	USB descriptors
 */
 
+/** USB descriptor header */
 typedef struct {
-	U8	bLength;
-	U8	bDescriptorType;
+	U8	bLength;			/**< descriptor length */
+	U8	bDescriptorType;	/**< descriptor type */
 } TUSBDescHeader;
 
 #define DESC_DEVICE				1

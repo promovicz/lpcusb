@@ -17,7 +17,7 @@
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-/*
+/** @file
 	Standard request handler.
 	
 	This modules handles the 'chapter 9' processing, specifically the
@@ -29,17 +29,17 @@
 	will not be part of this module.
 */
 
-// TODO some requests have to return a request error if device not configured:
-// TODO GET_INTERFACE, GET_STATUS, SET_INTERFACE, SYNCH_FRAME
-// TODO this applies to the following if endpoint != 0:
-// TODO SET_FEATURE, GET_FEATURE 
+// @TODO some requests have to return a request error if device not configured:
+// @TODO GET_INTERFACE, GET_STATUS, SET_INTERFACE, SYNCH_FRAME
+// @TODO this applies to the following if endpoint != 0:
+// @TODO SET_FEATURE, GET_FEATURE 
 
 #include "type.h"
 #include "usbdebug.h"
 #include "usbstruct.h"
 #include "usbapi.h"
 
-#define MAX_DESC_HANDLERS	4		// device, interface, endpoint, other
+#define MAX_DESC_HANDLERS	4		/**< device, interface, endpoint, other */
 
 // device state info
 static U8				bConfiguration = 0;
@@ -218,17 +218,15 @@ static BOOL HandleStdEndPointReq(TSetupPacket	*pSetup, int *piLen, U8 **ppbData)
 }
 
 
-/*************************************************************************
-	USBHandleStandardRequest
-	========================
-		Local function to handle a standard request
+/**
+	Local function to handle a standard request
 		
-	IN		pSetup		The setup packet
-	IN/OUT	*piLen		Pointer to data length
-			ppbData		Data buffer.
+	@param [in]		pSetup		The setup packet
+	@param [in,out]	*piLen		Pointer to data length
+	@param [in]		ppbData		Data buffer.
 
-	Returns TRUE if the request was handled successfully
-**************************************************************************/
+	@return TRUE if the request was handled successfully
+ */
 BOOL USBHandleStandardRequest(TSetupPacket	*pSetup, int *piLen, U8 **ppbData)
 {
 	// try the custom request handler first
@@ -245,14 +243,11 @@ BOOL USBHandleStandardRequest(TSetupPacket	*pSetup, int *piLen, U8 **ppbData)
 }
 
 
-/*************************************************************************
-	USBRegisterCustomReqHandler
-	===========================
-		Registers a callback for custom standard device requests
+/**
+	Registers a callback for custom standard device requests
 		
-	IN		pfnHandler	Callback function pointer
-
-**************************************************************************/
+	@param [in]	pfnHandler	Callback function pointer
+ */
 void USBRegisterCustomReqHandler(TFnHandleRequest *pfnHandler)
 {
 	pfnHandleCustomReq = pfnHandler;

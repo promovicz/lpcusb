@@ -1,4 +1,4 @@
-/*
+/**
 	(c) 2006, Bertrik Sikken, bertrik@sikken.nl
 
 	Hardware definitions for the LPC214x USB controller

@@ -17,13 +17,17 @@
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
+/** @file
+	USB stack initialisation
+ */
+
 #include "type.h"
 #include "usbdebug.h"
 #include "usbapi.h"
 
 
 // data storage area for standard requests
-U8	abStdReqData[8];
+static U8	abStdReqData[8];
 
 
 /*************************************************************************
@@ -33,19 +37,17 @@ U8	abStdReqData[8];
 static void HandleUsbReset(U8 bDevStatus)
 {
 	if (bDevStatus & DEV_STATUS_RESET) {
-		USBHwReset();
 		DBG("\n!");
 	}
 }
 
 
-/*************************************************************************
-	USBInit
-	=======
-		Initialises the USB hardware and sets up the USB stack by
-		installing default callbacks.
+/**
+	Initialises the USB hardware and sets up the USB stack by
+	installing default callbacks.
 	
-**************************************************************************/
+	@return TRUE if initialisation was successful
+ */
 BOOL USBInit(void)
 {
 	// init hardware

@@ -17,9 +17,9 @@
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-/*
+/** @file
 	Default descriptor handler.
-*/
+ */
 
 
 #include "type.h"
@@ -30,33 +30,29 @@
 static const U8	*pabDescrip = NULL;
 
 
-/*************************************************************************
-	USBRegisterDescriptors
-	======================
-		Registers a pointer to a descriptor block containing all descriptors
-		for the device.
+/**
+	Registers a pointer to a descriptor block containing all descriptors
+	for the device.
 
-	IN		pabDescriptors	The descriptor byte array
-
-**************************************************************************/
+	@param [in]	pabDescriptors	The descriptor byte array
+ */
 void USBRegisterDescriptors(const U8 *pabDescriptors)
 {
 	pabDescrip = pabDescriptors;
 }
 
 
-/*************************************************************************
-	USBHandleDescriptor
-	===================
-		Parses a previously installed descriptor block and attempts to find
-		the specified USB descriptor.
+/**
+	Parses a previously installed descriptor block and attempts to find
+	the specified USB descriptor.
 		
-	IN		wTypeIndex	Type and index of the descriptor
-			wLangID		Language ID of the descriptor (currently unused)
-	OUT		*piLen		Descriptor length
-			*ppbData	Descriptor data
-
-**************************************************************************/
+	@param [in]		wTypeIndex	Type and index of the descriptor
+	@param [in]		wLangID		Language ID of the descriptor (currently unused)
+	@param [out]	*piLen		Descriptor length
+	@param [out]	*ppbData	Descriptor data
+	
+	@return TRUE if the descriptor was found, FALSE otherwise
+ */
 BOOL USBHandleDescriptor(U16 wTypeIndex, U16 wLangID, int *piLen, U8 **ppbData)
 {
 	U8	bType, bIndex;
