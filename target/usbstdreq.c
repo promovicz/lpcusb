@@ -214,7 +214,9 @@ static BOOL HandleStdEndPointReq(TSetupPacket	*pSetup, int *piLen, U8 **ppbData)
 
 
 /**
-	Local function to handle a standard request
+	Default handler for standard ('chapter 9') requests
+	
+	If a custom request handler was installed, this handler is called first.
 		
 	@param [in]		pSetup		The setup packet
 	@param [in,out]	*piLen		Pointer to data length
@@ -239,7 +241,15 @@ BOOL USBHandleStandardRequest(TSetupPacket	*pSetup, int *piLen, U8 **ppbData)
 
 
 /**
-	Registers a callback for custom standard device requests
+	Registers a callback for custom device requests
+	
+	In USBHandleStandardRequest, the custom request handler gets a first
+	chance at handling the request before it is handed over to the 'chapter 9'
+	request handler.
+	
+	This can be used for example in HID devices, where a REQ_GET_DESCRIPTOR
+	request is sent to an interface, which is not covered by the 'chapter 9'
+	specification.
 		
 	@param [in]	pfnHandler	Callback function pointer
  */
