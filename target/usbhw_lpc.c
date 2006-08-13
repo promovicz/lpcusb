@@ -408,8 +408,6 @@ void USBHwConfigDevice(BOOL fConfigured)
 	USB interrupt handler
 		
 	Endpoint interrupts are mapped to the slow interrupt
-	
-	\todo should we cause interrupt on NAK?
  */
 void USBHwISR(void)
 {
