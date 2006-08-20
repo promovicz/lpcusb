@@ -34,6 +34,14 @@
 
 #define BLOCKSIZE		512
 
+// SCSI commands
+#define	SCSI_CMD_TEST_UNIT_READY	0x00
+#define SCSI_CMD_REQUEST_SENSE		0x03
+#define SCSI_CMD_INQUIRY			0x12
+#define SCSI_CMD_READ_CAPACITY		0x25
+#define SCSI_CMD_READ_10			0x28
+#define SCSI_CMD_WRITE_10			0x2A
+
 // sense code
 #define WRITE_ERROR				0x030C00
 #define READ_ERROR				0x031100
@@ -59,12 +67,12 @@ static const U8		abInquiry[] = {
 };
 
 //	Data for "request sense" command. The 0xFF are filled in later
-static U8 const abSense[] = { 0x70, 0x00, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x0A, 
+static const U8 abSense[] = { 0x70, 0x00, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x0A, 
 							  0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00,
 							  0x00, 0x00 };
 
 //	Buffer for holding one block of disk data
-static U8			abBlockBuf[512];
+static U8 abBlockBuf[512];
 
 
 typedef struct {
@@ -117,33 +125,33 @@ U8 * SCSIHandleCmd(U8 *pbCDB, int iCDBLen, int *piRspLen, BOOL *pfDevIn)
 	switch (pCDB->bOperationCode) {
 
 	// test unit ready (6)
-	case 0x00:
+	case SCSI_CMD_TEST_UNIT_READY:
 		DBG("TEST UNIT READY\n");
 		*piRspLen = 0;
 		break;
 	
 	// request sense (6)
-	case 0x03:
+	case SCSI_CMD_REQUEST_SENSE:
 		DBG("REQUEST SENSE (%06X)\n", dwSense);
 		// check params
 		*piRspLen = MIN(18, pCDB->bLength);
 		break;
 	
 	// inquiry (6)
-	case 0x12:
+	case SCSI_CMD_INQUIRY:
 		DBG("INQUIRY\n");
 		// see SPC20r20, 4.3.4.6
 		*piRspLen = MIN(36, pCDB->bLength);
 		break;
 		
 	// read capacity (10)
-	case 0x25:
+	case SCSI_CMD_READ_CAPACITY:
 		DBG("READ CAPACITY\n");
 		*piRspLen = 8;
 		break;
 		
 	// read (10)
-	case 0x28:
+	case SCSI_CMD_READ_10:
 		if (iCDBLen != 10) {
 			return NULL;
 		}
@@ -154,7 +162,7 @@ U8 * SCSIHandleCmd(U8 *pbCDB, int iCDBLen, int *piRspLen, BOOL *pfDevIn)
 		break;
 
 	// write (10)
-	case 0x2A:
+	case SCSI_CMD_WRITE_10:
 		if (iCDBLen != 10) {
 			return NULL;
 		}
@@ -214,7 +222,7 @@ U8 * SCSIHandleData(U8 *pbCDB, int iCDBLen, U8 *pbData, U32 dwOffset)
 		break;
 	
 	// request sense
-	case 0x03:
+	case SCSI_CMD_REQUEST_SENSE:
 		memcpy(pbData, abSense, 18);
 		// fill in KEY/ASC/ASCQ
 		pbData[2] = (dwSense >> 16) & 0xFF;
@@ -225,12 +233,12 @@ U8 * SCSIHandleData(U8 *pbCDB, int iCDBLen, U8 *pbData, U32 dwOffset)
 		break;
 	
 	// inquiry
-	case 0x12:
+	case SCSI_CMD_INQUIRY:
 		memcpy(pbData, abInquiry, sizeof(abInquiry));
 		break;
 		
 	// read capacity
-	case 0x25:
+	case SCSI_CMD_READ_CAPACITY:
 		// get size of drive (bytes)
 		BlockDevGetSize(&dwNumBlocks);
 		// calculate highest LBA
@@ -247,7 +255,7 @@ U8 * SCSIHandleData(U8 *pbCDB, int iCDBLen, U8 *pbData, U32 dwOffset)
 		break;
 		
 	// read10
-	case 0x28:
+	case SCSI_CMD_READ_10:
 		dwLBA = (pbCDB[2] << 24) | (pbCDB[3] << 16) | (pbCDB[4] << 8) | (pbCDB[5]);
 
 		// copy data from block buffer
@@ -266,7 +274,7 @@ U8 * SCSIHandleData(U8 *pbCDB, int iCDBLen, U8 *pbData, U32 dwOffset)
 		return abBlockBuf + dwBufPos;
 
 	// write10
-	case 0x2A:
+	case SCSI_CMD_WRITE_10:
 		dwLBA = (pbCDB[2] << 24) | (pbCDB[3] << 16) | (pbCDB[4] << 8) | (pbCDB[5]);
 		
 		// copy data to block buffer
