@@ -230,7 +230,7 @@ static BOOL HIDHandleStdReq(TSetupPacket *pSetup, int *piLen, U8 **ppbData)
 		case DESC_HID_PHYSICAL:
 		default:
 		    // search descriptor space
-		    return USBHandleDescriptor(pSetup->wValue, pSetup->wIndex, piLen, ppbData);
+		    return USBGetDescriptor(pSetup->wValue, pSetup->wIndex, piLen, ppbData);
 		}
 		
 		return TRUE;
@@ -282,7 +282,7 @@ int main(void)
 	USBRegisterRequestHandler(REQTYPE_TYPE_CLASS, HandleClassRequest, abClassReqData);
 
 	// register endpoint
-	USBHwRegisterEPIntHandler(INTR_IN_EP, MAX_PACKET_SIZE, NULL);
+	USBHwRegisterEPIntHandler(INTR_IN_EP, NULL);
 
 	// register frame handler
 	USBHwRegisterFrameHandler(HandleFrame);
