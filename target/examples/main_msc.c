@@ -183,8 +183,8 @@ int main(void)
 	USBRegisterRequestHandler(REQTYPE_TYPE_CLASS, HandleClassRequest, abClassReqData);
 	
 	// register endpoint handlers
-	USBHwRegisterEPIntHandler(BULK_IN_EP, MAX_PACKET_SIZE, MSCBotBulkIn);
-	USBHwRegisterEPIntHandler(BULK_OUT_EP, MAX_PACKET_SIZE, MSCBotBulkOut);
+	USBHwRegisterEPIntHandler(BULK_IN_EP, MSCBotBulkIn);
+	USBHwRegisterEPIntHandler(BULK_OUT_EP, MSCBotBulkOut);
 
 	DBG("Starting USB communication\n");
 
