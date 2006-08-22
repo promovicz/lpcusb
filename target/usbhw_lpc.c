@@ -152,13 +152,32 @@ static void USBHwEPEnable(int idx, BOOL fEnable)
 
 
 /**
+	Configures an endpoint and enables it
+		
+	@param [in]	bEP				Endpoint number
+	@param [in]	wMaxPacketSize	Maximum packet size for this EP
+ */
+void USBHwEPConfig(U8 bEP, U16 wMaxPacketSize)
+{
+	int idx;
+	
+	idx = EP2IDX(bEP);
+	
+	// realise EP
+	USBHwEPRealize(idx, wMaxPacketSize);
+
+	// enable EP
+	USBHwEPEnable(idx, TRUE);
+}
+
+
+/**
 	Registers an endpoint event callback
 		
 	@param [in]	bEP				Endpoint number
-	@param [in]	wMaxPacketSize	Maximum packet size for this endpoint
 	@param [in]	pfnHandler		Callback function
  */
-void USBHwRegisterEPIntHandler(U8 bEP, U16 wMaxPacketSize, TFnEPIntHandler *pfnHandler)
+void USBHwRegisterEPIntHandler(U8 bEP, TFnEPIntHandler *pfnHandler)
 {
 	int idx;
 	
@@ -169,13 +188,10 @@ void USBHwRegisterEPIntHandler(U8 bEP, U16 wMaxPacketSize, TFnEPIntHandler *pfnH
 	/* add handler to list of EP handlers */
 	_apfnEPIntHandlers[idx / 2] = pfnHandler;
 	
-	/* enable EP interrupt*/
+	/* enable EP interrupt */
 	USBEpIntEn |= (1 << idx);
 	USBDevIntEn |= EP_SLOW;
 	
-	// realise endpoint
-	USBHwEPRealize(idx, wMaxPacketSize);
-
 	DBG("Registered handler for EP 0x%x\n", bEP);
 }
 
@@ -387,18 +403,6 @@ int USBHwEPRead(U8 bEP, U8 *pbBuf, int iMaxLen)
  */
 void USBHwConfigDevice(BOOL fConfigured)
 {
-	int i;
-
-	// realise endpoints (copied from enabled interrupts)
-	USBReEP = USBEpIntEn;
-
-	// enable all installed endpoints
-	for (i = 0; i < 32; i++) {
-		if (USBEpIntEn & (1 << i)) {
-			USBHwEPEnable(i, TRUE);
-		}
-	}
-
 	// set configured bit
 	USBHwCmdWrite(CMD_DEV_CONFIG, fConfigured ? CONF_DEVICE : 0);
 }
@@ -521,12 +525,8 @@ BOOL USBHwInit(void)
 	USBEpIntClr = 0xFFFFFFFF;
 
 	// setup control endpoints
-	USBHwEPRealize(0, MAX_PACKET_SIZE0);
-	USBHwEPRealize(1, MAX_PACKET_SIZE0);
-
-	// enable/clear control endpoints
-	USBHwEPEnable(0, TRUE);
-	USBHwEPEnable(1, TRUE);
+	USBHwEPConfig(0x00, MAX_PACKET_SIZE0);
+	USBHwEPConfig(0x80, MAX_PACKET_SIZE0);
 	
 	// by default, only ACKs generate interrupts
 	USBHwNakIntEnable(0);
