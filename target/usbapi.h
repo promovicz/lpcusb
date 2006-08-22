@@ -50,6 +50,7 @@ void USBHwSetAddress	(U8 bAddr);
 void USBHwConfigDevice	(BOOL fConfigured);
 
 // endpoint operations
+void USBHwEPConfig		(U8 bEP, U16 wMaxPacketSize);
 int  USBHwEPRead		(U8 bEP, U8 *pbBuf, int iMaxLen);
 int	 USBHwEPWrite		(U8 bEP, U8 *pbBuf, int iLen);
 void USBHwEPStall		(U8 bEP, BOOL fStall);
@@ -57,7 +58,7 @@ BOOL USBHwEPIsStalled	(U8 bEP);
 
 /** Endpoint interrupt handler callback */
 typedef void (TFnEPIntHandler)	(U8 bEP, U8 bEPStatus);
-void USBHwRegisterEPIntHandler	(U8 bEP, U16 wMaxPacketSize, TFnEPIntHandler *pfnHandler);
+void USBHwRegisterEPIntHandler	(U8 bEP, TFnEPIntHandler *pfnHandler);
 
 /** Device status handler callback */
 typedef void (TFnDevIntHandler)	(U8 bDevStatus);
@@ -89,7 +90,6 @@ BOOL USBHandleStandardRequest(TSetupPacket *pSetup, int *piLen, U8 **ppbData);
 /** Default EP0 handler */
 void USBHandleControlTransfer(U8 bEP, U8 bEPStat);
 
-/** Default descriptor handler */
+/** Descriptor handling */
 void USBRegisterDescriptors(const U8 *pabDescriptors);
-BOOL USBHandleDescriptor(U16 wTypeIndex, U16 wLangID, int *piLen, U8 **ppbData);
-
+BOOL USBGetDescriptor(U16 wTypeIndex, U16 wLangID, int *piLen, U8 **ppbData);

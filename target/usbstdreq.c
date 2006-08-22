@@ -41,10 +41,161 @@
 
 #define MAX_DESC_HANDLERS	4		/**< device, interface, endpoint, other */
 
+
+/* general descriptor field offsets */
+#define DESC_bLength					0	/**< length offset */
+#define DESC_bDescriptorType			1	/**< descriptor type offset */	
+
+/* config descriptor field offsets */
+#define CONF_DESC_wTotalLength			2	/**< total length offset */
+#define CONF_DESC_bConfigurationValue	5	/**< configuration value offset */	
+
+/* interface descriptor field offsets */
+#define INTF_DESC_bAlternateSetting		3	/**< alternate setting offset */
+
+/* endpoint descriptor field offsets */
+#define ENDP_DESC_bEndpointAddress		2	/**< endpoint address offset */
+#define ENDP_DESC_wMaxPacketSize		4	/**< maximum packet size offset */
+
+
 /** Currently selected configuration */
 static U8				bConfiguration = 0;
 /** Installed custom request handler */
 static TFnHandleRequest	*pfnHandleCustomReq = NULL;
+/** Pointer to registered descriptors */
+static const U8			*pabDescrip = NULL;
+
+
+/**
+	Registers a pointer to a descriptor block containing all descriptors
+	for the device.
+
+	@param [in]	pabDescriptors	The descriptor byte array
+ */
+void USBRegisterDescriptors(const U8 *pabDescriptors)
+{
+	pabDescrip = pabDescriptors;
+}
+
+
+/**
+	Parses the list of installed USB descriptors and attempts to find
+	the specified USB descriptor.
+		
+	@param [in]		wTypeIndex	Type and index of the descriptor
+	@param [in]		wLangID		Language ID of the descriptor (currently unused)
+	@param [out]	*piLen		Descriptor length
+	@param [out]	*ppbData	Descriptor data
+	
+	@return TRUE if the descriptor was found, FALSE otherwise
+ */
+BOOL USBGetDescriptor(U16 wTypeIndex, U16 wLangID, int *piLen, U8 **ppbData)
+{
+	U8	bType, bIndex;
+	U8	*pab;
+	int iCurIndex;
+	
+	ASSERT(pabDescrip != NULL);
+
+	bType = GET_DESC_TYPE(wTypeIndex);
+	bIndex = GET_DESC_INDEX(wTypeIndex);
+	
+	pab = (U8 *)pabDescrip;
+	iCurIndex = 0;
+	
+	while (pab[DESC_bLength] != 0) {
+		if (pab[DESC_bDescriptorType] == bType) {
+			if (iCurIndex == bIndex) {
+				// set data pointer
+				*ppbData = pab;
+				// get length from structure
+				if (bType == DESC_CONFIGURATION) {
+					// configuration descriptor is an exception, length is at offset 2 and 3
+					*piLen =	(pab[CONF_DESC_wTotalLength]) |
+								(pab[CONF_DESC_wTotalLength + 1] << 8);
+				}
+				else {
+					// normally length is at offset 0
+					*piLen = pab[0];
+				}
+				return TRUE;
+			}
+			iCurIndex++;
+		}
+		// skip to next descriptor
+		pab += pab[DESC_bLength];
+	}
+	// nothing found
+	DBG("Desc %x not found!\n", wTypeIndex);
+	return FALSE;
+}
+
+
+/**
+	Configures the device according to the specified configuration index and
+	alternate setting by parsing the installed USB descriptor list.
+	A configuration index of 0 unconfigures the device.
+		
+	@param [in]		bConfigIndex	Configuration index
+	@param [in]		bAltSetting		Alternate setting number
+	
+	@todo function always returns TRUE, add stricter checking?
+	
+	@return TRUE if successfully configured, FALSE otherwise
+ */
+static BOOL USBSetConfiguration(U8 bConfigIndex, U8 bAltSetting)
+{
+	U8	*pab;
+	U8	bCurConfig, bCurAltSetting;
+	U8	bEP;
+	U16	wMaxPktSize;
+	
+	ASSERT(pabDescrip != NULL);
+
+	// parse installed USB descriptors to configure endpoints
+	pab = (U8 *)pabDescrip;
+	bCurConfig = 0xFF;
+	bCurAltSetting = 0xFF;
+
+	while (pab[DESC_bLength] != 0) {
+		
+		switch (pab[DESC_bDescriptorType]) {
+			
+		case DESC_CONFIGURATION:
+			// remember current configuration index
+			bCurConfig = pab[CONF_DESC_bConfigurationValue];
+			break;
+			
+		case DESC_INTERFACE:
+			// remember current alternate setting
+			bCurAltSetting = pab[INTF_DESC_bAlternateSetting];
+			break;
+			
+		case DESC_ENDPOINT:
+			if ((bCurConfig == bConfigIndex) &&
+				(bCurAltSetting == bAltSetting)) {
+				// endpoint found for desired config and alternate setting
+				bEP = pab[ENDP_DESC_bEndpointAddress];
+				wMaxPktSize = 	(pab[ENDP_DESC_wMaxPacketSize]) |
+								(pab[ENDP_DESC_wMaxPacketSize + 1] << 8);
+				// configure it
+				USBHwEPConfig(bEP, wMaxPktSize);
+			}
+			break;
+			
+		default:
+			break;
+		}
+		// skip to next descriptor
+		pab += pab[DESC_bLength];
+	}
+
+	// configure device
+	USBHwConfigDevice(bConfigIndex != 0);
+	
+	return TRUE;
+}
+
 
 /**
 	Local function to handle a standard device request
@@ -75,7 +226,7 @@ static BOOL HandleStdDeviceReq(TSetupPacket *pSetup, int *piLen, U8 **ppbData)
 
 	case REQ_GET_DESCRIPTOR:
 		DBG("D%x", pSetup->wValue);
-		return USBHandleDescriptor(pSetup->wValue, pSetup->wIndex, piLen, ppbData);
+		return USBGetDescriptor(pSetup->wValue, pSetup->wIndex, piLen, ppbData);
 
 	case REQ_GET_CONFIGURATION:
 		// indicate if we are configured
@@ -84,8 +235,12 @@ static BOOL HandleStdDeviceReq(TSetupPacket *pSetup, int *piLen, U8 **ppbData)
 		break;
 
 	case REQ_SET_CONFIGURATION:
-		bConfiguration = pSetup->wValue & 0xFF;	// TODO use bConfigurationValue(s)
-		USBHwConfigDevice((pSetup->wValue & 0xFF) != 0);
+		if (!USBSetConfiguration(pSetup->wValue & 0xFF, 0)) {
+			DBG("USBSetConfiguration failed!\n");
+			return FALSE;
+		}
+		// configuration successful, update current configuration
+		bConfiguration = pSetup->wValue & 0xFF;	
 		break;
 
 	case REQ_CLEAR_FEATURE:
