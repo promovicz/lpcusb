@@ -17,7 +17,7 @@ TAR		= tar
 CFLAGS  = -I./ -I../ -c -W -Wall -Os -g -DDEBUG -mcpu=arm7tdmi
 ARFLAGS = -rcs
 
-LIBOBJS =	usbhw_lpc.o usbcontrol.o usbstdreq.o usbinit.o usbdescrip.o
+LIBOBJS =	usbhw_lpc.o usbcontrol.o usbstdreq.o usbinit.o
 
 all: lib examples
 
