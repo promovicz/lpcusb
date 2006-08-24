@@ -79,14 +79,14 @@ static const U8 abDescriptors[] = {
 	DESC_ENDPOINT,
 	BULK_IN_EP,				// bEndpointAddress
 	0x02,					// bmAttributes = bulk
-	LE_WORD(0x40),			// wMaxPacketSize
+	LE_WORD(MAX_PACKET_SIZE),// wMaxPacketSize
 	0x00,					// bInterval
 // EP
 	0x07,
 	DESC_ENDPOINT,
 	BULK_OUT_EP,			// bEndpointAddress
 	0x02,					// bmAttributes = bulk
-	LE_WORD(0x40),			// wMaxPacketSize
+	LE_WORD(MAX_PACKET_SIZE),// wMaxPacketSize
 	0x00,					// bInterval
 
 // string descriptors
