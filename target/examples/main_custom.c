@@ -42,7 +42,7 @@
 
 #define MAX_PACKET_SIZE	64
 
-#define LE_WORD(x)		(x&0xFF),(x>>8)
+#define LE_WORD(x)		((x)&0xFF),((x)>>8)
 
 
 static const U8 abDescriptors[] = {
