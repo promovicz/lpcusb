@@ -149,11 +149,11 @@ static void BOTStall(void)
 {
 	if ((CBW.bmCBWFlags & 0x80) || (CBW.dwCBWDataTransferLength == 0)) {
 		// stall data-in or CSW
-		USBHwEPStall(BULK_IN_EP, TRUE);
+		USBHwEPStall(MSC_BULK_IN_EP, TRUE);
 	}
 	else {
 		// stall data-out
-		USBHwEPStall(BULK_OUT_EP, TRUE);
+		USBHwEPStall(MSC_BULK_OUT_EP, TRUE);
 	}
 }
 
@@ -179,7 +179,7 @@ static void HandleDataIn(void)
 	// send data to host?
 	if (dwOffset < dwTransferSize) {
 		iChunk = MIN(64, dwTransferSize - dwOffset);
-		USBHwEPWrite(BULK_IN_EP, pbData, iChunk);
+		USBHwEPWrite(MSC_BULK_IN_EP, pbData, iChunk);
 		dwOffset += iChunk;
 	}
 	
@@ -208,7 +208,7 @@ static void HandleDataOut(void)
 	
 	if (dwOffset < dwTransferSize) {
 		// get data from host
-		iChunk = USBHwEPRead(BULK_OUT_EP, pbData, dwTransferSize - dwOffset);
+		iChunk = USBHwEPRead(MSC_BULK_OUT_EP, pbData, dwTransferSize - dwOffset);
 		// process data in SCSI layer
 		pbData = SCSIHandleData(CBW.CBWCB, CBW.bCBWCBLength, pbData, dwOffset);
 		if (pbData == NULL) {
@@ -258,8 +258,8 @@ void MSCBotBulkOut(U8 bEP, U8 bEPStatus)
 		// check if we got a good CBW
 		if (!CheckCBW(&CBW, iLen)) {
 			// see 6.6.1
-			USBHwEPStall(BULK_IN_EP, TRUE);
-			USBHwEPStall(BULK_OUT_EP, TRUE);
+			USBHwEPStall(MSC_BULK_IN_EP, TRUE);
+			USBHwEPStall(MSC_BULK_OUT_EP, TRUE);
 			eState = eStalled;
 			break;
 		}
@@ -323,7 +323,7 @@ void MSCBotBulkOut(U8 bEP, U8 bEPStatus)
 	
 	case eStalled:
 		// keep stalling
-		USBHwEPStall(BULK_OUT_EP, TRUE);
+		USBHwEPStall(MSC_BULK_OUT_EP, TRUE);
 		break;
 		
 	default:
@@ -363,13 +363,13 @@ void MSCBotBulkIn(U8 bEP, U8 bEPStatus)
 	
 	case eCSW:
 		// wait for an IN token, then send the CSW
-		USBHwEPWrite(BULK_IN_EP, (U8 *)&CSW, 13);
+		USBHwEPWrite(MSC_BULK_IN_EP, (U8 *)&CSW, 13);
 		eState = eCBW;
 		break;
 		
 	case eStalled:
 		// keep stalling
-		USBHwEPStall(BULK_IN_EP, TRUE);
+		USBHwEPStall(MSC_BULK_IN_EP, TRUE);
 		break;
 		
 	default:

@@ -57,7 +57,7 @@ static const U8 abDescriptors[] = {
 // configuration descriptor
 	0x09,
 	DESC_CONFIGURATION,
-	LE_WORD(0x20),			// wTotalLength
+	LE_WORD(32),			// wTotalLength
 	0x01,					// bNumInterfaces
 	0x01,					// bConfigurationValue
 	0x00,					// iConfiguration
@@ -77,14 +77,14 @@ static const U8 abDescriptors[] = {
 // EP
 	0x07,
 	DESC_ENDPOINT,
-	BULK_IN_EP,				// bEndpointAddress
+	MSC_BULK_IN_EP,			// bEndpointAddress
 	0x02,					// bmAttributes = bulk
 	LE_WORD(MAX_PACKET_SIZE),// wMaxPacketSize
 	0x00,					// bInterval
 // EP
 	0x07,
 	DESC_ENDPOINT,
-	BULK_OUT_EP,			// bEndpointAddress
+	MSC_BULK_OUT_EP,		// bEndpointAddress
 	0x02,					// bmAttributes = bulk
 	LE_WORD(MAX_PACKET_SIZE),// wMaxPacketSize
 	0x00,					// bInterval
@@ -183,8 +183,8 @@ int main(void)
 	USBRegisterRequestHandler(REQTYPE_TYPE_CLASS, HandleClassRequest, abClassReqData);
 	
 	// register endpoint handlers
-	USBHwRegisterEPIntHandler(BULK_IN_EP, MSCBotBulkIn);
-	USBHwRegisterEPIntHandler(BULK_OUT_EP, MSCBotBulkOut);
+	USBHwRegisterEPIntHandler(MSC_BULK_IN_EP, MSCBotBulkIn);
+	USBHwRegisterEPIntHandler(MSC_BULK_OUT_EP, MSCBotBulkOut);
 
 	DBG("Starting USB communication\n");
 
