@@ -19,11 +19,12 @@ ODFLAGS	= -x --syms
 
 LINKFILE	= lpc2148-rom.ld
 
-OBJS =	crt.o startup.o printf.o console.o
+CSRCS	= startup.c printf.c console.c
+OBJS 	= crt.o $(CSRCS:.c=.o)
 
 EXAMPLES = hid serial msc custom
 
-all: $(EXAMPLES)
+all: depend $(EXAMPLES)
 
 hid: 	$(OBJS) main_hid.o $(LIBNAME).a
 serial:	$(OBJS) main_serial.o $(LIBNAME).a
@@ -41,10 +42,17 @@ crt.o: crt.s
 	$(CC) -c $(AFLAGS) -Wa,-ahlms=crt.lst crt.s -o crt.o
 	
 clean:
-	rm -f *.hex *.elf *.o *.lst *.dmp *.map
+	rm -f *.hex *.elf *.o *.lst *.dmp *.map .depend
 
 # recompile if the Makefile changes
 $(OBJS): Makefile
 
+# dependency checking
+depend: $(CSRCS)
+	$(CC) $(CFLAGS) -MM $^ > .depend || rm -f .depend
+
 # phony targets
 .PHONY: clean
+
+-include .depend
+

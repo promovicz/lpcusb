@@ -17,12 +17,13 @@ TAR		= tar
 CFLAGS  = -I./ -I../ -c -W -Wall -Os -g -DDEBUG -mcpu=arm7tdmi
 ARFLAGS = -rcs
 
-LIBOBJS =	usbhw_lpc.o usbcontrol.o usbstdreq.o usbinit.o
+LIBSRCS = usbhw_lpc.c usbcontrol.c usbstdreq.c usbinit.c
+LIBOBJS = $(LIBSRCS:.c=.o)
 
-all: lib examples
+all: depend lib examples
 
 clean:
-	$(RM) -f $(LIBNAME).a $(LIBOBJS)
+	$(RM) -f $(LIBNAME).a $(LIBOBJS) .depend
 	make -C examples clean
 
 examples:
@@ -41,5 +42,11 @@ dist: clean
 # recompile if the Makefile changes
 $(LIBOBJS): Makefile
 
+# dependency checking
+depend: $(LIBSRCS)
+	$(CC) $(CFLAGS) -MM $^ > .depend || rm -f .depend
+
 # phony targets
-.PHONY: clean examples
+.PHONY: all clean examples depend
+
+-include .depend
