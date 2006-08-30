@@ -1,5 +1,25 @@
-v20070729
-	20070729, bertrik
+	20060830, bertrik
+	* Makefiles: Initial try at dependencies
+	* lpc2000_spi.c: Fixed silly bug in setting PINSEL1
+	
+	20060825, bertrik
+	* main_*.c: Fixed bug in LE_WORD macro
+
+	20060822, bertrik
+	* Device configuration is now done according to USB descriptor.
+	* usbapi.h/usbhw_lpc.c: USBHwRegisterEPIntHandler no longer needs the max packet size argument.
+	* usbapi.h/usbhw_lpc.c: Added USBHwEPConfig function
+	* usbapi.h/usbstdreq.c: USBHandleDescriptor renamed to USBGetDescriptor.
+	* usbdescrip.c: code moved into usbstdreq.c, usbdescrip.c removed
+
+	20060820, bertrik
+	* msc_scsi.c: now uses #defines instead of numerics
+
+	20060811, bertrik
+	* Doxygenised most of the source code
+
+v20060729
+	20060729, bertrik
 	* Fixed bug with uninitialised variable (iType) in usbcontrol.c
 	* Minor cosmetic cleanup
 
