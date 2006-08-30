@@ -125,7 +125,7 @@ void SPIInit(void)
 	SPI_PINSEL &= ~((3 << SPI_SCK_FUNCBIT) | (3 << SPI_MISO_FUNCBIT) | (3 << SPI_MOSI_FUNCBIT));
 	SPI_PINSEL |= ((1 << SPI_SCK_FUNCBIT) | (1 << SPI_MISO_FUNCBIT) | (1 << SPI_MOSI_FUNCBIT));
 
-	PINSEL1 &= (3 << (SPI_SS_FUNCBIT - 32));
+	PINSEL1 &= ~(3 << (SPI_SS_FUNCBIT - 32));
 	PINSEL1 |= (0 << (SPI_SS_FUNCBIT - 32));
 
 	// set Chip-Select high - unselect card
