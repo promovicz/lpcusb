@@ -1,3 +1,4 @@
+v20060903
 	20060830, bertrik
 	* Makefiles: Initial try at dependencies
 	* lpc2000_spi.c: Fixed silly bug in setting PINSEL1
