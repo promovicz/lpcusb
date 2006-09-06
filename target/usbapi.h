@@ -22,8 +22,8 @@
 #define EP_STATUS_DATA		(1<<0)		/**< EP has data */
 #define EP_STATUS_STALLED	(1<<1)		/**< EP is stalled */
 #define EP_STATUS_SETUP		(1<<2)		/**< EP received setup packet */
-#define EP_STATUS_NACKED	(1<<3)		/**< EP sent NAK */
-#define EP_STATUS_ERROR		(1<<4)		/**< EP data was overwritten by setup packet */
+#define EP_STATUS_ERROR		(1<<3)		/**< EP data was overwritten by setup packet */
+#define EP_STATUS_NACKED	(1<<4)		/**< EP sent NAK */
 
 // device status sent through callback
 #define DEV_STATUS_CONNECT		(1<<0)	/**< device just got connected */
