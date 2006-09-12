@@ -265,6 +265,48 @@ DBG("SET_CONTROL_LINE_STATE %X\n", pSetup->wValue);
 	return TRUE;
 }
 
+#define VICIntSelect   *((volatile unsigned int *) 0xFFFFF00C)
+#define VICIntEnable   *((volatile unsigned int *) 0xFFFFF010)
+#define VICVectAddr    *((volatile unsigned int *) 0xFFFFF030)
+#define VICVectAddr0   *((volatile unsigned int *) 0xFFFFF100)
+#define VICVectCntl0   *((volatile unsigned int *) 0xFFFFF200)
+
+
+#define	INT_VECT_NUM	0
+
+static void USBIntHandler(void) __attribute__ ((interrupt("IRQ")));
+
+#define IRQ_MASK 0x00000080
+
+static inline unsigned __get_cpsr(void)
+{
+  unsigned long retval;
+  asm volatile (" mrs  %0, cpsr" : "=r" (retval) : /* no inputs */  ); 
+  return retval;
+}
+
+static inline void __set_cpsr(unsigned val)
+{
+  asm volatile (" msr  cpsr, %0" : /* no outputs */ : "r" (val)  );	
+}
+
+
+unsigned enableIRQ(void)
+{
+  unsigned _cpsr;
+
+  _cpsr = __get_cpsr();
+  __set_cpsr(_cpsr & ~IRQ_MASK);
+  return _cpsr;
+}
+
+
+static void USBIntHandler(void)
+{
+	USBHwISR();
+	VICVectAddr = 0x00;    // dummy write to VIC to signal end of ISR 	
+}
+
 
 /*************************************************************************
 	main
@@ -296,12 +338,21 @@ int main(void)
 
 	DBG("Starting USB communication\n");
 
+	// set up USB interrupt
+	VICIntSelect &= ~(1<<22);               // select IRQ for USB
+	VICIntEnable |= (1<<22);
+
+	(*(&VICVectCntl0+INT_VECT_NUM)) = 0x20 | 22; // choose highest priority ISR slot 	
+	(*(&VICVectAddr0+INT_VECT_NUM)) = (int)USBIntHandler;
+	
+	enableIRQ();
+
 	// connect to bus
 	USBHwConnect(TRUE);
 
-	// call USB interrupt handler continuously
+	// wait for USB interrupt while doing some other stuff
 	while (1) {
-		USBHwISR();
+		// do other stuff
 	}
 
 	return 0;
