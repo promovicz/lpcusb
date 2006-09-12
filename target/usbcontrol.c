@@ -19,24 +19,24 @@
 
 /** @file
 	Control transfer handler.
-
-	In case of a control-write (host-to-device), this module collects the full
-	control message in a local buffer, then sends it off to an installed
-	request handler.
-
-	In case of a control-read (device-to-host), an installed request handler
-	is asked to handle the request and provide return data. The handler can
-	either put the data in the control data buffer through the supplied pointer,
-	or it can supply a new data pointer. In both cases, the handler is required
-	to update the data length in *piLen;
-
-
-	Currently, control transfers are handled in a very simple way, keeping
-	almost no state about the control transfer progress (setup stage, data
-	stage, status stage). We simply follow the host: if it sends data, we store
-	it in the control data buffer and if it asks for data, we just send the next
-	block.
 	
+	This module handles control transfers and is normally installed on the
+	endpoint 0 callback.
+	
+	Control transfers can be of the following type:
+	0 Standard;
+	1 Class;
+	2 Vendor;
+	3 Reserved.
+
+	A callback can be installed for each of these control transfers using
+	USBRegisterRequestHandler.
+	When an OUT request arrives, data is collected in the data store provided
+	with the USBRegisterRequestHandler call. When the transfer is done, the
+	callback is called.
+	When an IN request arrives, the callback is called immediately to either
+	put the control transfer data in the data store, or to get a pointer to
+	control transfer data. The data is then packetised and sent to the host.
 */
 
 #include "type.h"
