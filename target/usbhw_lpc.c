@@ -280,7 +280,7 @@ BOOL USBHwEPIsStalled(U8 bEP)
 {
    	int idx = EP2IDX(bEP);
 
-	return (USBHwCmdRead(CMD_EP_SELECT | idx) & 2);
+	return (USBHwCmdRead(CMD_EP_SELECT | idx) & EP_STATUS_STALLED);
 }
 
 
@@ -415,16 +415,21 @@ void USBHwConfigDevice(BOOL fConfigured)
  */
 void USBHwISR(void)
 {
-	U32	dwStatus, dwEPIntStat;
+	U32	dwStatus;
 	U32 dwIntBit;
 	U8	bEPStat, bDevStat, bStat;
 	int i;
-	
-	dwStatus = USBDevIntSt;
 
-	// handle device dwStatus interrupts
+	// handle device interrupts
+	dwStatus = USBDevIntSt;
+	
 	if (dwStatus & DEV_STAT) {
 DEBUG_LED_ON(8);		
+		/*	Clear DEV_STAT interrupt before reading DEV_STAT register.
+			This prevents corrupted device status reads, see
+			LPC2148 User manual revision 2, 25 july 2006.
+		*/
+		USBDevIntClr = DEV_STAT;
 		bDevStat = USBHwCmdRead(CMD_DEV_STATUS);
 		if (bDevStat & (CON_CH | SUS_CH | RST)) {
 			// convert device status into something HW independent
@@ -436,18 +441,18 @@ DEBUG_LED_ON(8);
 				_pfnDevIntHandler(bStat);
 			}
 		}
-		// clear DEV_STAT;
-		USBDevIntClr = DEV_STAT;
 DEBUG_LED_OFF(8);		
 	}
 	
 	// check endpoint interrupts
 	if (dwStatus & EP_SLOW) {
 DEBUG_LED_ON(9);		
-		dwEPIntStat = USBEpIntSt;
+		// clear EP_SLOW
+		USBDevIntClr = EP_SLOW;
+		// check all endpoints
 		for (i = 0; i < 32; i++) {
 			dwIntBit = (1 << i);
-			if (dwEPIntStat & dwIntBit) {
+			if (USBEpIntSt & dwIntBit) {
 				// clear int (and retrieve status)
 				USBEpIntClr = dwIntBit;
 				Wait4DevInt(CDFULL);
@@ -464,19 +469,18 @@ DEBUG_LED_ON(9);
 				}
 			}
 		}
-		// clear EP_SLOW
-		USBDevIntClr = EP_SLOW;
 DEBUG_LED_OFF(9);
 	}
 	
 	// handle frame interrupt
 	if (dwStatus & FRAME) {
 DEBUG_LED_ON(10);
+		// clear int
+		USBDevIntClr = FRAME;
+		// call handler
 		if (_pfnFrameHandler != NULL) {
 			_pfnFrameHandler(0);	// implement counter later
 		}
-		// clear int
-		USBDevIntClr = FRAME;
 DEBUG_LED_OFF(10);
 	}
 }
