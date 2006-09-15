@@ -17,9 +17,16 @@
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-/*
+/**
+	@file
+
 	This is the SCSI layer of the USB mass storage application example.
 	This layer depends directly on the blockdev layer.
+	
+	Windows peculiarities:
+	* Size of REQUEST SENSE CDB is 12 bytes instead of expected 6
+	* Windows requires VERIFY(10) command to do a format.
+	  This command is not mandatory in the SBC/SBC-2 specification.
 */
 
 
@@ -34,15 +41,23 @@
 
 #define BLOCKSIZE		512
 
-// SCSI commands
+// SBC2 mandatory SCSI commands
 #define	SCSI_CMD_TEST_UNIT_READY	0x00
 #define SCSI_CMD_REQUEST_SENSE		0x03
+#define SCSI_CMD_FORMAT_UNIT		0x04
+#define SCSI_CMD_READ_6				0x08	/* not implemented yet */
 #define SCSI_CMD_INQUIRY			0x12
-#define SCSI_CMD_READ_CAPACITY		0x25
+#define SCSI_CMD_SEND_DIAGNOSTIC	0x1D	/* not implemented yet */
+#define SCSI_CMD_READ_CAPACITY_10	0x25
 #define SCSI_CMD_READ_10			0x28
-#define SCSI_CMD_WRITE_10			0x2A
+#define SCSI_CMD_REPORT_LUNS		0xA0	/* not implemented yet */
 
-// sense code
+// SBC2 optional SCSI commands
+#define SCSI_CMD_WRITE_6			0x0A	/* not implemented yet */
+#define SCSI_CMD_WRITE_10			0x2A
+#define SCSI_CMD_VERIFY_10			0x2F	/* required for windows format */
+
+// sense codes
 #define WRITE_ERROR				0x030C00
 #define READ_ERROR				0x031100
 #define INVALID_CMD_OPCODE		0x052000
@@ -54,8 +69,8 @@ static U32			dwSense;	// hex: 00aabbcc, where aa=KEY, bb=ASC, cc=ASCQ
 static const U8		abInquiry[] = {
 	0x00,		// PDT = direct-access device
 	0x80,		// removeable medium bit = set
-	0x04,		// version = complies to SPC2r20
-	0x02,		// response data format = SPC2r20
+	0x05,		// version = complies to SPC3
+	0x02,		// response data format = SPC3
 	0x1F,		// additional length
 	0x00,
 	0x00,
@@ -111,17 +126,26 @@ void SCSIReset(void)
 	Returns a pointer to the data exchange buffer if successful,
 	return NULL otherwise.
 **************************************************************************/
-U8 * SCSIHandleCmd(U8 *pbCDB, int iCDBLen, int *piRspLen, BOOL *pfDevIn)
+U8 * SCSIHandleCmd(U8 *pbCDB, U8 iCDBLen, int *piRspLen, BOOL *pfDevIn)
 {
+	static const U8 aiCDBLen[] = {6, 10, 10, 0, 16, 12, 0, 0};
 	int		i;
 	TCDB6	*pCDB;
 	U32		dwLen, dwLBA;
+	U8		bGroupCode;
 	
 	pCDB = (TCDB6 *)pbCDB;
 	
 	// default direction is from device to host
 	*pfDevIn = TRUE;
 	
+	// check CDB length
+	bGroupCode = (pCDB->bOperationCode >> 5) & 0x7;
+	if (iCDBLen < aiCDBLen[bGroupCode]) {
+		DBG("Invalid CBD len (expected %d)!\n", aiCDBLen[bGroupCode]);
+		return NULL;
+	}
+
 	switch (pCDB->bOperationCode) {
 
 	// test unit ready (6)
@@ -137,24 +161,26 @@ U8 * SCSIHandleCmd(U8 *pbCDB, int iCDBLen, int *piRspLen, BOOL *pfDevIn)
 		*piRspLen = MIN(18, pCDB->bLength);
 		break;
 	
+	case SCSI_CMD_FORMAT_UNIT:
+		DBG("FORMAT UNIT %02X\n", pbCDB[1]);
+		*piRspLen = 0;
+		break;
+	
 	// inquiry (6)
 	case SCSI_CMD_INQUIRY:
 		DBG("INQUIRY\n");
-		// see SPC20r20, 4.3.4.6
+		// see SPC3r23, 4.3.4.6
 		*piRspLen = MIN(36, pCDB->bLength);
 		break;
 		
 	// read capacity (10)
-	case SCSI_CMD_READ_CAPACITY:
+	case SCSI_CMD_READ_CAPACITY_10:
 		DBG("READ CAPACITY\n");
 		*piRspLen = 8;
 		break;
 		
 	// read (10)
 	case SCSI_CMD_READ_10:
-		if (iCDBLen != 10) {
-			return NULL;
-		}
 		dwLBA = (pbCDB[2] << 24) | (pbCDB[3] << 16) | (pbCDB[4] << 8) | (pbCDB[5]);
 		dwLen = (pbCDB[7] << 8) | pbCDB[8];
 		DBG("READ10, LBA=%d, len=%d\n", dwLBA, dwLen);
@@ -163,9 +189,6 @@ U8 * SCSIHandleCmd(U8 *pbCDB, int iCDBLen, int *piRspLen, BOOL *pfDevIn)
 
 	// write (10)
 	case SCSI_CMD_WRITE_10:
-		if (iCDBLen != 10) {
-			return NULL;
-		}
 		dwLBA = (pbCDB[2] << 24) | (pbCDB[3] << 16) | (pbCDB[4] << 8) | (pbCDB[5]);
 		dwLen = (pbCDB[7] << 8) | pbCDB[8];
 		DBG("WRITE10, LBA=%d, len=%d\n", dwLBA, dwLen);
@@ -173,6 +196,16 @@ U8 * SCSIHandleCmd(U8 *pbCDB, int iCDBLen, int *piRspLen, BOOL *pfDevIn)
 		*pfDevIn = FALSE;
 		break;
 
+	case SCSI_CMD_VERIFY_10:
+		DBG("VERIFY10\n");
+		if ((pbCDB[1] & (1 << 1)) != 0) {
+			// we don't support BYTCHK
+			DBG("BYTCHK not supported\n");
+			return NULL;
+		}
+		*piRspLen = 0;
+		break;
+	
 	default:
 		DBG("Unhandled SCSI: ");		
 		for (i = 0; i < iCDBLen; i++) {
@@ -203,7 +236,7 @@ U8 * SCSIHandleCmd(U8 *pbCDB, int iCDBLen, int *piRspLen, BOOL *pfDevIn)
 	Returns a pointer to the next data to be exchanged if successful,
 	returns NULL otherwise.
 **************************************************************************/
-U8 * SCSIHandleData(U8 *pbCDB, int iCDBLen, U8 *pbData, U32 dwOffset)
+U8 * SCSIHandleData(U8 *pbCDB, U8 iCDBLen, U8 *pbData, U32 dwOffset)
 {
 	TCDB6	*pCDB;
 	U32		dwLBA;
@@ -215,7 +248,7 @@ U8 * SCSIHandleData(U8 *pbCDB, int iCDBLen, U8 *pbData, U32 dwOffset)
 	switch (pCDB->bOperationCode) {
 
 	// test unit ready
-	case 0x00:
+	case SCSI_CMD_TEST_UNIT_READY:
 		if (dwSense != 0) {
 			return NULL;
 		}
@@ -232,13 +265,17 @@ U8 * SCSIHandleData(U8 *pbCDB, int iCDBLen, U8 *pbData, U32 dwOffset)
 		dwSense = 0;
 		break;
 	
+	case SCSI_CMD_FORMAT_UNIT:
+		// nothing to do, ignore this command
+		break;
+	
 	// inquiry
 	case SCSI_CMD_INQUIRY:
 		memcpy(pbData, abInquiry, sizeof(abInquiry));
 		break;
 		
 	// read capacity
-	case SCSI_CMD_READ_CAPACITY:
+	case SCSI_CMD_READ_CAPACITY_10:
 		// get size of drive (bytes)
 		BlockDevGetSize(&dwNumBlocks);
 		// calculate highest LBA
@@ -291,6 +328,10 @@ U8 * SCSIHandleData(U8 *pbCDB, int iCDBLen, U8 *pbData, U32 dwOffset)
 		}
 		// return pointer to next data
 		return abBlockBuf + dwBufPos;
+		
+	case SCSI_CMD_VERIFY_10:
+		// dummy implementation
+		break;
 		
 	default:
 		// unsupported command
