@@ -49,6 +49,7 @@
 /* config descriptor field offsets */
 #define CONF_DESC_wTotalLength			2	/**< total length offset */
 #define CONF_DESC_bConfigurationValue	5	/**< configuration value offset */	
+#define CONF_DESC_bmAttributes			7	/**< configuration characteristics */
 
 /* interface descriptor field offsets */
 #define INTF_DESC_bAlternateSetting		3	/**< alternate setting offset */
@@ -152,47 +153,53 @@ static BOOL USBSetConfiguration(U8 bConfigIndex, U8 bAltSetting)
 	
 	ASSERT(pabDescrip != NULL);
 
-	// parse installed USB descriptors to configure endpoints
-	pab = (U8 *)pabDescrip;
-	bCurConfig = 0xFF;
-	bCurAltSetting = 0xFF;
+	if (bConfigIndex == 0) {
+		// unconfigure device
+		USBHwConfigDevice(FALSE);
+	}
+	else {
+		// configure endpoints for this configuration/altsetting
+		pab = (U8 *)pabDescrip;
+		bCurConfig = 0xFF;
+		bCurAltSetting = 0xFF;
 
-	while (pab[DESC_bLength] != 0) {
-		
-		switch (pab[DESC_bDescriptorType]) {
-			
-		case DESC_CONFIGURATION:
-			// remember current configuration index
-			bCurConfig = pab[CONF_DESC_bConfigurationValue];
-			break;
-			
-		case DESC_INTERFACE:
-			// remember current alternate setting
-			bCurAltSetting = pab[INTF_DESC_bAlternateSetting];
-			break;
-			
-		case DESC_ENDPOINT:
-			if ((bCurConfig == bConfigIndex) &&
-				(bCurAltSetting == bAltSetting)) {
-				// endpoint found for desired config and alternate setting
-				bEP = pab[ENDP_DESC_bEndpointAddress];
-				wMaxPktSize = 	(pab[ENDP_DESC_wMaxPacketSize]) |
-								(pab[ENDP_DESC_wMaxPacketSize + 1] << 8);
-				// configure it
-				USBHwEPConfig(bEP, wMaxPktSize);
+		while (pab[DESC_bLength] != 0) {
+
+			switch (pab[DESC_bDescriptorType]) {
+
+			case DESC_CONFIGURATION:
+				// remember current configuration index
+				bCurConfig = pab[CONF_DESC_bConfigurationValue];
+				break;
+
+			case DESC_INTERFACE:
+				// remember current alternate setting
+				bCurAltSetting = pab[INTF_DESC_bAlternateSetting];
+				break;
+
+			case DESC_ENDPOINT:
+				if ((bCurConfig == bConfigIndex) &&
+					(bCurAltSetting == bAltSetting)) {
+					// endpoint found for desired config and alternate setting
+					bEP = pab[ENDP_DESC_bEndpointAddress];
+					wMaxPktSize = 	(pab[ENDP_DESC_wMaxPacketSize]) |
+									(pab[ENDP_DESC_wMaxPacketSize + 1] << 8);
+					// configure it
+					USBHwEPConfig(bEP, wMaxPktSize);
+				}
+				break;
+
+			default:
+				break;
 			}
-			break;
-			
-		default:
-			break;
+			// skip to next descriptor
+			pab += pab[DESC_bLength];
 		}
-		// skip to next descriptor
-		pab += pab[DESC_bLength];
+		
+		// configure device
+		USBHwConfigDevice(TRUE);
 	}
 
-	// configure device
-	USBHwConfigDevice(bConfigIndex != 0);
-	
 	return TRUE;
 }
 
@@ -214,8 +221,8 @@ static BOOL HandleStdDeviceReq(TSetupPacket *pSetup, int *piLen, U8 **ppbData)
 	
 	case REQ_GET_STATUS:
 		// bit 0: self-powered
-		// bit 1: remote wakeup
-		pbData[0] = 0; 	// TODO use bmAttributes according to configuration
+		// bit 1: remote wakeup = not supported
+		pbData[0] = 0;
 		pbData[1] = 0;
 		*piLen = 2;
 		break;
