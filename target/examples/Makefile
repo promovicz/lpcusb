@@ -40,7 +40,7 @@ $(EXAMPLES):
 crt.o: crt.s
 	@ echo ".assembling"
 	$(CC) -c $(AFLAGS) -Wa,-ahlms=crt.lst crt.s -o crt.o
-	
+
 clean:
 	rm -f *.hex *.elf *.o *.lst *.dmp *.map .depend
 
