@@ -126,7 +126,7 @@ BOOL USBGetDescriptor(U16 wTypeIndex, U16 wLangID, int *piLen, U8 **ppbData)
 				}
 				else {
 					// normally length is at offset 0
-					*piLen = pab[0];
+					*piLen = pab[DESC_bLength];
 				}
 				return TRUE;
 			}
@@ -193,7 +193,7 @@ static BOOL USBSetConfiguration(U8 bConfigIndex, U8 bAltSetting)
 					bEP = pab[ENDP_DESC_bEndpointAddress];
 					wMaxPktSize = 	(pab[ENDP_DESC_wMaxPacketSize]) |
 									(pab[ENDP_DESC_wMaxPacketSize + 1] << 8);
-					// configure it
+					// configure endpoint
 					USBHwEPConfig(bEP, wMaxPktSize);
 				}
 				break;
