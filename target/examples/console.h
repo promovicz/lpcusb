@@ -17,8 +17,9 @@
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
+#define EOF (-1)
+
 void ConsoleInit(int iDivider);
 int putchar(int c);
-int puts(char *s);
-
+int puts(const char *s);
 
