@@ -72,7 +72,7 @@ int getchar (void)  {                    /* Read character from Serial Port   */
 }
 
 
-int puts(char *s)
+int puts(const char *s)
 {
 	while (*s) {
 		putchar(*s++);
