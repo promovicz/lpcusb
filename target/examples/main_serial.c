@@ -1,20 +1,28 @@
 /*
-	LPCUSB, an USB device driver for LPC microcontrollers
+	LPCUSB, an USB device driver for LPC microcontrollers	
 	Copyright (C) 2006 Bertrik Sikken (bertrik@sikken.nl)
 
-	This library is free software; you can redistribute it and/or
-	modify it under the terms of the GNU Lesser General Public
-	License as published by the Free Software Foundation; either
-	version 2.1 of the License, or (at your option) any later version.
+	Redistribution and use in source and binary forms, with or without
+	modification, are permitted provided that the following conditions are met:
 
-	This library is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-	Lesser General Public License for more details.
+	1. Redistributions of source code must retain the above copyright
+	   notice, this list of conditions and the following disclaimer.
+	2. Redistributions in binary form must reproduce the above copyright
+	   notice, this list of conditions and the following disclaimer in the
+	   documentation and/or other materials provided with the distribution.
+	3. The name of the author may not be used to endorse or promote products
+	   derived from this software without specific prior written permission.
 
-	You should have received a copy of the GNU Lesser General Public
-	License along with this library; if not, write to the Free Software
-	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+	THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+	IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+	OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+	IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, 
+	INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+	NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+	DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+	THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+	(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+	THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 /*
@@ -46,6 +54,8 @@
 #include "usbapi.h"
 #include "startup.h"
 
+#include "serial_fifo.h"
+
 
 #define BAUD_RATE	115200
 
@@ -65,6 +75,17 @@
 #define	GET_LINE_CODING			0x21
 #define	SET_CONTROL_LINE_STATE	0x22
 
+// interrupts
+#define VICIntSelect   *((volatile unsigned int *) 0xFFFFF00C)
+#define VICIntEnable   *((volatile unsigned int *) 0xFFFFF010)
+#define VICVectAddr    *((volatile unsigned int *) 0xFFFFF030)
+#define VICVectAddr0   *((volatile unsigned int *) 0xFFFFF100)
+#define VICVectCntl0   *((volatile unsigned int *) 0xFFFFF200)
+
+#define	INT_VECT_NUM	0
+
+#define IRQ_MASK 0x00000080
+
 // data structure for GET_LINE_CODING / SET_LINE_CODING class requests
 typedef struct {
 	U32		dwDTERate;
@@ -73,10 +94,18 @@ typedef struct {
 	U8		bDataBits;
 } TLineCoding;
 
-
 static TLineCoding LineCoding = {115200, 0, 0, 8};
 static U8 abBulkBuf[64];
 static U8 abClassReqData[8];
+
+static char txdata[VCOM_FIFO_SIZE];
+static char rxdata[VCOM_FIFO_SIZE];
+
+static fifo_t txfifo;
+static fifo_t rxfifo;
+
+// forward declaration of interrupt handler
+static void USBIntHandler(void) __attribute__ ((interrupt("IRQ")));
 
 
 static const U8 abDescriptors[] = {
@@ -169,7 +198,7 @@ static const U8 abDescriptors[] = {
 	0x02,						// bmAttributes = bulk
 	LE_WORD(MAX_PACKET_SIZE),	// wMaxPacketSize
 	0x00,						// bInterval
-
+	
 	// string descriptors
 	0x04,
 	DESC_STRING,
@@ -192,44 +221,58 @@ static const U8 abDescriptors[] = {
 };
 
 
-/*************************************************************************
-	BulkOut
-	=======
-		Local function to handle incoming bulk data
-
-	Currently, this function simply shows the data on the serial console
-	and echoes it back to the host.
-
-**************************************************************************/
+/**
+	Local function to handle incoming bulk data
+		
+	@param [in] bEP
+	@param [in] bEPStatus
+ */
 static void BulkOut(U8 bEP, U8 bEPStatus)
 {
 	int i, iLen;
-	char c;
 
+	// get data from USB into intermediate buffer
 	iLen = USBHwEPRead(bEP, abBulkBuf, sizeof(abBulkBuf));
 
-	// show on console
 	for (i = 0; i < iLen; i++) {
-		c = abBulkBuf[i];
-		if ((c == 9) || (c == 10) || (c == 13) || ((c >= 32) && (c <= 126))) {
-			DBG("%c", c);
-		}
-		else {
-			DBG(".");
-		}
+		// put into FIFO
+		fifo_put(&rxfifo, abBulkBuf[i]);
 	}
-
-	// echo
-	USBHwEPWrite(BULK_IN_EP, abBulkBuf, iLen);
 }
 
 
-/*************************************************************************
-	HandleClassRequest
-	==================
-		Local function to handle the USB-CDC class requests
+/**
+	Local function to handle outgoing bulk data
+		
+	@param [in] bEP
+	@param [in] bEPStatus
+ */
+static void BulkIn(U8 bEP, U8 bEPStatus)
+{
+	int i, iLen;
+	
+	// get bytes from transmit FIFO into intermediate buffer
+	for (i = 0; i < MAX_PACKET_SIZE; i++) {
+		if (!fifo_get(&txfifo, (char *)&abBulkBuf[i])) {
+			break;
+		}
+	}
+	iLen = i;
+	
+	// send over USB
+	if (iLen > 0) {
+		USBHwEPWrite(bEP, abBulkBuf, iLen);
+	}
+}
 
-**************************************************************************/
+
+/**
+	Local function to handle the USB-CDC class requests
+		
+	@param [in] pSetup
+	@param [out] piLen
+	@param [out] ppbData
+ */
 static BOOL HandleClassRequest(TSetupPacket *pSetup, int *piLen, U8 **ppbData)
 {
 	switch (pSetup->bRequest) {
@@ -265,18 +308,42 @@ DBG("SET_CONTROL_LINE_STATE %X\n", pSetup->wValue);
 	return TRUE;
 }
 
-#define VICIntSelect   *((volatile unsigned int *) 0xFFFFF00C)
-#define VICIntEnable   *((volatile unsigned int *) 0xFFFFF010)
-#define VICVectAddr    *((volatile unsigned int *) 0xFFFFF030)
-#define VICVectAddr0   *((volatile unsigned int *) 0xFFFFF100)
-#define VICVectCntl0   *((volatile unsigned int *) 0xFFFFF200)
+
+/**
+	Initialises the VCOM port.
+	Call this function before using VCOM_putchar or VCOM_getchar
+ */
+void VCOM_init(void)
+{
+	fifo_init(&txfifo, txdata);
+	fifo_init(&rxfifo, rxdata);
+}
 
 
-#define	INT_VECT_NUM	0
+/**
+	Writes one character to VCOM port
+	
+	@param [in] c character to write
+	@returns character written, or EOF if character could not be written
+ */
+int VCOM_putchar(int c)
+{
+	return fifo_put(&txfifo, c) ? c : EOF;
+}
 
-static void USBIntHandler(void) __attribute__ ((interrupt("IRQ")));
 
-#define IRQ_MASK 0x00000080
+/**
+	Reads one character from VCOM port
+	
+	@returns character read, or EOF if character could not be read
+ */
+int VCOM_getchar(void)
+{
+	char c;
+	
+	return fifo_get(&rxfifo, &c) ? c : EOF;
+}
+
 
 static inline unsigned __get_cpsr(void)
 {
@@ -314,6 +381,8 @@ static void USBIntHandler(void)
 **************************************************************************/
 int main(void)
 {
+	int c;
+	
 	// PLL and MAM
 	Initialize();
 
@@ -333,8 +402,14 @@ int main(void)
 
 	// register endpoint handlers
 	USBHwRegisterEPIntHandler(INT_IN_EP, NULL);
-	USBHwRegisterEPIntHandler(BULK_IN_EP, NULL);
+	USBHwRegisterEPIntHandler(BULK_IN_EP, BulkIn);
 	USBHwRegisterEPIntHandler(BULK_OUT_EP, BulkOut);
+
+	// enable bulk-in interrupts on NAKs
+	USBHwNakIntEnable(INACK_BI);
+
+	// initialise VCOM
+	VCOM_init();
 
 	DBG("Starting USB communication\n");
 
@@ -350,9 +425,19 @@ int main(void)
 	// connect to bus
 	USBHwConnect(TRUE);
 
-	// wait for USB interrupt while doing some other stuff
+	// echo any character received (do USB stuff in interrupt)
 	while (1) {
-		// do other stuff
+		c = VCOM_getchar();
+		if (c != EOF) {
+			// show on console
+			if ((c == 9) || (c == 10) || (c == 13) || ((c >= 32) && (c <= 126))) {
+				DBG("%c", c);
+			}
+			else {
+				DBG(".");
+			}
+			VCOM_putchar(c);
+		}
 	}
 
 	return 0;
