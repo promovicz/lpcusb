@@ -455,7 +455,6 @@ DEBUG_LED_OFF(8);
 	
 	// check endpoint interrupts
 	if (dwStatus & EP_SLOW) {
-DEBUG_LED_ON(9);		
 		// clear EP_SLOW
 		USBDevIntClr = EP_SLOW;
 		// check all endpoints
@@ -473,24 +472,29 @@ DEBUG_LED_ON(9);
 						((bEPStat & EPSTAT_EPN) ? EP_STATUS_NACKED : 0) |
 						((bEPStat & EPSTAT_PO) ? EP_STATUS_ERROR : 0);
 				// call handler
+				if (bEPStat & (1 <<5)) {
+DEBUG_LED_ON(9);		
+				}
+				if (bEPStat & (1 <<6)) {
+DEBUG_LED_ON(10);		
+				}
 				if (_apfnEPIntHandlers[i / 2] != NULL) {
 					_apfnEPIntHandlers[i / 2](IDX2EP(i), bStat);
 				}
+DEBUG_LED_OFF(9);
+DEBUG_LED_OFF(10);
 			}
 		}
-DEBUG_LED_OFF(9);
 	}
 	
 	// handle frame interrupt
 	if (dwStatus & FRAME) {
-DEBUG_LED_ON(10);
 		// clear int
 		USBDevIntClr = FRAME;
 		// call handler
 		if (_pfnFrameHandler != NULL) {
 			_pfnFrameHandler(0);	// implement counter later
 		}
-DEBUG_LED_OFF(10);
 	}
 }
 
