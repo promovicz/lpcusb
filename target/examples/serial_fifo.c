@@ -28,7 +28,7 @@
 #include "type.h"
 #include "serial_fifo.h"
 
-void fifo_init(fifo_t *fifo, char *buf)
+void fifo_init(fifo_t *fifo, U8 *buf)
 {
 	fifo->head = 0;
 	fifo->tail = 0;
@@ -36,7 +36,7 @@ void fifo_init(fifo_t *fifo, char *buf)
 }
 
 
-BOOL fifo_put(fifo_t *fifo, char c)
+BOOL fifo_put(fifo_t *fifo, U8 c)
 {
 	int next;
 	
@@ -54,7 +54,7 @@ BOOL fifo_put(fifo_t *fifo, char c)
 }
 
 
-BOOL fifo_get(fifo_t *fifo, char *pc)
+BOOL fifo_get(fifo_t *fifo, U8 *pc)
 {
 	int next;
 	

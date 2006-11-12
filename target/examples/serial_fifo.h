@@ -32,9 +32,9 @@
 typedef struct {
 	int		head;
 	int 	tail;
-	char	*buf;
+	U8		*buf;
 } fifo_t;
 
-void fifo_init(fifo_t *fifo, char *buf);
-BOOL fifo_put(fifo_t *fifo, char c);
-BOOL fifo_get(fifo_t *fifo, char *pc);
+void fifo_init(fifo_t *fifo, U8 *buf);
+BOOL fifo_put(fifo_t *fifo, U8 c);
+BOOL fifo_get(fifo_t *fifo, U8 *pc);

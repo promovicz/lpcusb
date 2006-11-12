@@ -98,8 +98,8 @@ static TLineCoding LineCoding = {115200, 0, 0, 8};
 static U8 abBulkBuf[64];
 static U8 abClassReqData[8];
 
-static char txdata[VCOM_FIFO_SIZE];
-static char rxdata[VCOM_FIFO_SIZE];
+static U8 txdata[VCOM_FIFO_SIZE];
+static U8 rxdata[VCOM_FIFO_SIZE];
 
 static fifo_t txfifo;
 static fifo_t rxfifo;
@@ -236,7 +236,10 @@ static void BulkOut(U8 bEP, U8 bEPStatus)
 
 	for (i = 0; i < iLen; i++) {
 		// put into FIFO
-		fifo_put(&rxfifo, abBulkBuf[i]);
+		if (!fifo_put(&rxfifo, abBulkBuf[i])) {
+			// overflow... :(
+			break;
+		}
 	}
 }
 
@@ -253,7 +256,7 @@ static void BulkIn(U8 bEP, U8 bEPStatus)
 	
 	// get bytes from transmit FIFO into intermediate buffer
 	for (i = 0; i < MAX_PACKET_SIZE; i++) {
-		if (!fifo_get(&txfifo, (char *)&abBulkBuf[i])) {
+		if (!fifo_get(&txfifo, &abBulkBuf[i])) {
 			break;
 		}
 	}
@@ -339,7 +342,7 @@ int VCOM_putchar(int c)
  */
 int VCOM_getchar(void)
 {
-	char c;
+	U8 c;
 	
 	return fifo_get(&rxfifo, &c) ? c : EOF;
 }
