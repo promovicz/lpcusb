@@ -17,6 +17,14 @@
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
+/**	@file
+
+	Bulk-only-transfer layer for mass storage.
+	
+	This layers sits between the generic USB layers and the SCSI layer
+	and performs data transfer according to the BOT protocol.
+*/
+
 #include <string.h>
 
 #include "type.h"
@@ -27,6 +35,7 @@
 #include "msc_scsi.h"
 
 
+/** Command block wrapper structure */
 typedef struct {
 	U32		dwCBWSignature;
 	U32		dwCBWTag;
@@ -37,6 +46,7 @@ typedef struct {
 	U8		CBWCB[16];
 } TCBW;
 
+/** Command status wrapper structure */
 typedef struct {
 	U32		dwCSWSignature;
 	U32		dwCSWTag;
@@ -44,6 +54,7 @@ typedef struct {
 	U8		bmCSWStatus;
 } TCSW;
 
+/** States of BOT state machine */
 typedef enum {
 	eCBW,
 	eDataOut,
@@ -53,15 +64,15 @@ typedef enum {
 } EBotState;
 
 
-#define CBW_SIGNATURE	0x43425355
-#define CSW_SIGNATURE	0x53425355
+#define CBW_SIGNATURE	0x43425355		/**< magic word in CBW */
+#define CSW_SIGNATURE	0x53425355		/**< magic word in CSW */
 
-#define STATUS_PASSED		0x00
-#define STATUS_FAILED		0x01
-#define STATUS_PHASE_ERR	0x02
+#define STATUS_PASSED		0x00		/**< successful transfer */
+#define STATUS_FAILED		0x01		/**< failed transfer */
+#define STATUS_PHASE_ERR	0x02		/**< conflict between host and device */
 
-static U32			dwTransferSize;		// total size of data transfer
-static U32			dwOffset;			// offset in current data transfer
+static U32			dwTransferSize;		/**< total size of data transfer */
+static U32			dwOffset;			/**< offset in current data transfer */
 
 static TCBW			CBW;
 static TCSW			CSW;
@@ -72,6 +83,9 @@ static U8			*pbData;
 
 
 
+/**
+	Resets the BOT state machine
+ */
 void MSCBotReset(void)
 {
 	DBG("BOT reset in state %d\n", eState);
@@ -82,6 +96,11 @@ void MSCBotReset(void)
 }
 
 
+/**
+	Prepares a CSW, to be sent on next bulk-IN interrupt
+		
+	@param [in]	bStatus	CSW status
+ */
 static void SendCSW(U8 bStatus)
 {
 	int iResidue;
@@ -101,16 +120,14 @@ static void SendCSW(U8 bStatus)
 }
 
 
-/*************************************************************************
-	CheckCBW
-	========
-		Checks if CBW is valid and meaningful
+/**
+	Checks if CBW is valid and meaningful
 		
-	IN		pCBW	Command block wrapper
-			iLen	Length of CBW
+	@param [in]	pCBW	Command block wrapper
+	@param [in]	iLen	Length of CBW
 			
-	Returns TRUE if valid and meaningful
-**************************************************************************/
+	@return TRUE if valid and meaningful
+ */
 static BOOL CheckCBW(TCBW *pCBW, int iLen)
 {
 	// CBW valid?
@@ -231,15 +248,13 @@ static void HandleDataOut(void)
 }
 		
 		
-/*************************************************************************
-	MSCBotBulkOut
-	===============
-		Handles the BOT bulk OUT endpoint
+/**
+	Handles the BOT bulk OUT endpoint
 		
-	IN		bEP			Endpoint number
-			bEPStatus	Endpoint status (indicates NAK, STALL, etc)
+	@param [in]	bEP			Endpoint number
+	@param [in]	bEPStatus	Endpoint status (indicates NAK, STALL, etc)
 		
-**************************************************************************/
+ */
 void MSCBotBulkOut(U8 bEP, U8 bEPStatus)
 {
 	int 	iLen, iChunk;
@@ -334,15 +349,13 @@ void MSCBotBulkOut(U8 bEP, U8 bEPStatus)
 }
 
 
-/*************************************************************************
-	MSCBotBulkIn
-	============
-		Handles the BOT bulk IN endpoint
+/**
+	Handles the BOT bulk IN endpoint
 		
-	IN		bEP			Endpoint number
-			bEPStatus	Endpoint status (indicates NAK, STALL, etc)
+	@param [in]	bEP			Endpoint number
+	@param [in]	bEPStatus	Endpoint status (indicates NAK, STALL, etc)
 		
-**************************************************************************/
+ */
 void MSCBotBulkIn(U8 bEP, U8 bEPStatus)
 {
 	// ignore events on stalled EP
