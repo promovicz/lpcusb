@@ -50,6 +50,8 @@
 #include "type.h"
 #include "usbdebug.h"
 
+#include "armVIC.h"
+
 #include "console.h"
 #include "usbapi.h"
 #include "startup.h"
@@ -348,29 +350,11 @@ int VCOM_getchar(void)
 }
 
 
-static inline unsigned __get_cpsr(void)
-{
-  unsigned long retval;
-  asm volatile (" mrs  %0, cpsr" : "=r" (retval) : /* no inputs */  ); 
-  return retval;
-}
-
-static inline void __set_cpsr(unsigned val)
-{
-  asm volatile (" msr  cpsr, %0" : /* no outputs */ : "r" (val)  );	
-}
-
-
-unsigned enableIRQ(void)
-{
-  unsigned _cpsr;
-
-  _cpsr = __get_cpsr();
-  __set_cpsr(_cpsr & ~IRQ_MASK);
-  return _cpsr;
-}
-
-
+/**
+	Interrupt handler
+	
+	Simply calls the USB ISR, then signals end of interrupt to VIC
+ */
 static void USBIntHandler(void)
 {
 	USBHwISR();
