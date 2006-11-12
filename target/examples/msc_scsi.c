@@ -241,7 +241,7 @@ U8 * SCSIHandleData(U8 *pbCDB, U8 iCDBLen, U8 *pbData, U32 dwOffset)
 	TCDB6	*pCDB;
 	U32		dwLBA;
 	U32		dwBufPos, dwBlockNr;
-	U32		dwNumBlocks, dwMaxBlock;
+	U32		dwDevSize, dwMaxBlock;
 	
 	pCDB = (TCDB6 *)pbCDB;
 	
@@ -277,9 +277,9 @@ U8 * SCSIHandleData(U8 *pbCDB, U8 iCDBLen, U8 *pbData, U32 dwOffset)
 	// read capacity
 	case SCSI_CMD_READ_CAPACITY_10:
 		// get size of drive (bytes)
-		BlockDevGetSize(&dwNumBlocks);
+		BlockDevGetSize(&dwDevSize);
 		// calculate highest LBA
-		dwMaxBlock = (dwNumBlocks - 1) / 512;
+		dwMaxBlock = (dwDevSize - 1) / 512;
 		
 		pbData[0] = (dwMaxBlock >> 24) & 0xFF;
 		pbData[1] = (dwMaxBlock >> 16) & 0xFF;
