@@ -70,3 +70,13 @@ BOOL fifo_get(fifo_t *fifo, U8 *pc)
 
 	return TRUE;
 }
+
+
+int fifo_free(fifo_t *fifo)
+{
+	int used;
+	
+	used = (VCOM_FIFO_SIZE + fifo->head - fifo->tail) % VCOM_FIFO_SIZE;
+	return (VCOM_FIFO_SIZE - 1 - used);
+}
+

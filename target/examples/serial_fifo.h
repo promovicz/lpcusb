@@ -38,3 +38,4 @@ typedef struct {
 void fifo_init(fifo_t *fifo, U8 *buf);
 BOOL fifo_put(fifo_t *fifo, U8 c);
 BOOL fifo_get(fifo_t *fifo, U8 *pc);
+int	 fifo_free(fifo_t *fifo);
