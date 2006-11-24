@@ -1,3 +1,28 @@
+v20061124
+	20061112, bertrik
+	* usbhw_lpc.c: Updated LED display to show effect of double buffering
+	* armvic.c/.h: Newly added (used by serial port example)
+	* main_serial.c: Bugfix suggested by Galen Seitz
+
+	20061105, bertrik
+	* main_serial.c: now uses FIFO with VCOM_getchar and VCOM_putchar functions to receive/send data
+	* serial_fifo.c/.h: Newly added (used by serial port example)
+
+	20061018, bertrik
+	* Updated license to modified BSD license
+
+	20060924, bertrik
+	* usbstdreq.c: Prevent EPs from being configured when UNconfiguring the device
+
+	20060915, bertrik
+	* msc_scsi.c: Implemented more SCSI commands to improve windows compatibility and compliance with specification
+
+	20060912, bertrik
+	* usbhw_lpc.c: Updated interrupt clearing order, according to new user manual
+
+	20060906, bertrik
+	* usbapi.h: Updated EP_STATUS_* defines
+
 v20060903
 	20060830, bertrik
 	* Makefiles: Initial try at dependencies
