@@ -115,7 +115,7 @@ static const U8 abDescriptors[] = {
 // device descriptor
 	0x12,
 	DESC_DEVICE,
-	LE_WORD(0x0200),			// bcdUSB
+	LE_WORD(0x0101),			// bcdUSB
 	0x02,						// bDeviceClass
 	0x00,						// bDeviceSubClass
 	0x00,						// bDeviceProtocol
