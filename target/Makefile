@@ -37,7 +37,7 @@ $(LIBNAME).a: $(LIBOBJS)
 
 # Builds release tar file
 dist: clean
-	cd .. && $(TAR) --exclude={CVS,cvs} -cvzf $(PKG_NAME)-$(DATE).tar.gz $(PKG_NAME)
+	cd .. && $(TAR) --exclude={CVS,cvs,.svn} -cvzf $(PKG_NAME)-$(DATE).tar.gz $(PKG_NAME)
 
 # recompile if the Makefile changes
 $(LIBOBJS): Makefile
