@@ -279,17 +279,16 @@ void USBHwNakIntEnable(U8 bIntBits)
 
 
 /**
-	Gets the stalled property of an endpoint
+	Gets the status from a specific endpoint.
 		
 	@param [in]	bEP		Endpoint number
-			
-	@return TRUE if stalled, FALSE if not stalled
+	@return Endpoint status byte (containing EP_STATUS_xxx bits)
  */
-BOOL USBHwEPIsStalled(U8 bEP)
+U8	USBHwEPGetStatus(U8 bEP)
 {
-   	int idx = EP2IDX(bEP);
+	int idx = EP2IDX(bEP);
 
-	return (USBHwCmdRead(CMD_EP_SELECT | idx) & EP_STATUS_STALLED);
+	return USBHwCmdRead(CMD_EP_SELECT | idx);
 }
 
 

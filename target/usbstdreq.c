@@ -348,7 +348,7 @@ static BOOL HandleStdEndPointReq(TSetupPacket	*pSetup, int *piLen, U8 **ppbData)
 	switch (pSetup->bRequest) {
 	case REQ_GET_STATUS:
 		// bit 0 = endpointed halted or not
-		pbData[0] = USBHwEPIsStalled(pSetup->wIndex) ? 1 : 0;
+		pbData[0] = (USBHwEPGetStatus(pSetup->wIndex) & EP_STATUS_STALLED) ? 1 : 0;
 		pbData[1] = 0;
 		*piLen = 2;
 		break;

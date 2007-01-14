@@ -79,7 +79,7 @@ void USBHwEPConfig		(U8 bEP, U16 wMaxPacketSize);
 int  USBHwEPRead		(U8 bEP, U8 *pbBuf, int iMaxLen);
 int	 USBHwEPWrite		(U8 bEP, U8 *pbBuf, int iLen);
 void USBHwEPStall		(U8 bEP, BOOL fStall);
-BOOL USBHwEPIsStalled	(U8 bEP);
+U8   USBHwEPGetStatus	(U8 bEP);
 
 /** Endpoint interrupt handler callback */
 typedef void (TFnEPIntHandler)	(U8 bEP, U8 bEPStatus);
