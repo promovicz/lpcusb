@@ -1,3 +1,6 @@
+	20070123, bertrik
+	* crt.s: increased IRQ stack size to prevent stack overflow (thanks to Paul Knight)
+
 v20061124
 	20061112, bertrik
 	* usbhw_lpc.c: Updated LED display to show effect of double buffering
