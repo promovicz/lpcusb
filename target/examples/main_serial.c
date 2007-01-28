@@ -233,13 +233,18 @@ static void BulkOut(U8 bEP, U8 bEPStatus)
 {
 	int i, iLen;
 
+	if (fifo_free(&rxfifo) < MAX_PACKET_SIZE) {
+		// may not fit into fifo
+		return;
+	}
+
 	// get data from USB into intermediate buffer
 	iLen = USBHwEPRead(bEP, abBulkBuf, sizeof(abBulkBuf));
-
 	for (i = 0; i < iLen; i++) {
 		// put into FIFO
 		if (!fifo_put(&rxfifo, abBulkBuf[i])) {
 			// overflow... :(
+			ASSERT(FALSE);
 			break;
 		}
 	}
