@@ -543,10 +543,6 @@ BOOL USBHwInit(void)
 	USBEpIntClr = 0xFFFFFFFF;
 	USBEpIntPri = 0;
 
-	// setup control endpoints
-	USBHwEPConfig(0x00, MAX_PACKET_SIZE0);
-	USBHwEPConfig(0x80, MAX_PACKET_SIZE0);
-	
 	// by default, only ACKs generate interrupts
 	USBHwNakIntEnable(0);
 	

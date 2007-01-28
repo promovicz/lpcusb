@@ -70,6 +70,10 @@ BOOL USBInit(void)
 	USBHwRegisterEPIntHandler(0x00, USBHandleControlTransfer);
 	USBHwRegisterEPIntHandler(0x80, USBHandleControlTransfer);
 	
+	// setup control endpoints
+	USBHwEPConfig(0x00, MAX_PACKET_SIZE0);
+	USBHwEPConfig(0x80, MAX_PACKET_SIZE0);
+	
 	// register standard request handler
 	USBRegisterRequestHandler(REQTYPE_TYPE_STANDARD, USBHandleStandardRequest, abStdReqData);
 
