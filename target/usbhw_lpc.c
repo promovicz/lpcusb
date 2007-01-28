@@ -536,9 +536,12 @@ BOOL USBHwInit(void)
 	
 	// disable/clear all interrupts for now
 	USBDevIntEn = 0;
-	USBEpIntEn = 0;
 	USBDevIntClr = 0xFFFFFFFF;
+	USBDevIntPri = 0;
+
+	USBEpIntEn = 0;
 	USBEpIntClr = 0xFFFFFFFF;
+	USBEpIntPri = 0;
 
 	// setup control endpoints
 	USBHwEPConfig(0x00, MAX_PACKET_SIZE0);
