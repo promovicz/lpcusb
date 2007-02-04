@@ -260,7 +260,13 @@ static void BulkOut(U8 bEP, U8 bEPStatus)
 static void BulkIn(U8 bEP, U8 bEPStatus)
 {
 	int i, iLen;
-	
+
+	if (fifo_avail(&txfifo) == 0) {
+		// no more data, disable further NAK interrupts until next USB frame
+		USBHwNakIntEnable(0);
+		return;
+	}
+
 	// get bytes from transmit FIFO into intermediate buffer
 	for (i = 0; i < MAX_PACKET_SIZE; i++) {
 		if (!fifo_get(&txfifo, &abBulkBuf[i])) {
@@ -367,6 +373,14 @@ static void USBIntHandler(void)
 }
 
 
+static void USBFrameHandler(U16 wFrame)
+{
+	if (fifo_avail(&txfifo) > 0) {
+		// data available, enable NAK interrupt on bulk in
+		USBHwNakIntEnable(INACK_BI);
+	}
+}
+
 /*************************************************************************
 	main
 	====
@@ -396,6 +410,9 @@ int main(void)
 	USBHwRegisterEPIntHandler(INT_IN_EP, NULL);
 	USBHwRegisterEPIntHandler(BULK_IN_EP, BulkIn);
 	USBHwRegisterEPIntHandler(BULK_OUT_EP, BulkOut);
+	
+	// register frame handler
+	USBHwRegisterFrameHandler(USBFrameHandler);
 
 	// enable bulk-in interrupts on NAKs
 	USBHwNakIntEnable(INACK_BI);
