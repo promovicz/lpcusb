@@ -419,6 +419,8 @@ void USBHwConfigDevice(BOOL fConfigured)
 /**
 	USB interrupt handler
 		
+	@todo Get all 11 bits of frame number instead of just 8
+
 	Endpoint interrupts are mapped to the slow interrupt
  */
 void USBHwISR(void)
@@ -427,12 +429,27 @@ void USBHwISR(void)
 	U32 dwIntBit;
 	U8	bEPStat, bDevStat, bStat;
 	int i;
+	U16	wFrame;
+
+// LED9 monitors total time in interrupt routine
+DEBUG_LED_ON(9);
 
 	// handle device interrupts
 	dwStatus = USBDevIntSt;
 	
+	// frame interrupt
+	if (dwStatus & FRAME) {
+		// clear int
+		USBDevIntClr = FRAME;
+		// call handler
+		if (_pfnFrameHandler != NULL) {
+			wFrame = USBHwCmdRead(CMD_DEV_READ_CUR_FRAME_NR);
+			_pfnFrameHandler(wFrame);
+		}
+	}
+	
+	// device status interrupt
 	if (dwStatus & DEV_STAT) {
-DEBUG_LED_ON(8);		
 		/*	Clear DEV_STAT interrupt before reading DEV_STAT register.
 			This prevents corrupted device status reads, see
 			LPC2148 User manual revision 2, 25 july 2006.
@@ -446,13 +463,14 @@ DEBUG_LED_ON(8);
 					((bDevStat & RST) ? DEV_STATUS_RESET : 0);
 			// call handler
 			if (_pfnDevIntHandler != NULL) {
+DEBUG_LED_ON(8);		
 				_pfnDevIntHandler(bStat);
+DEBUG_LED_OFF(8);		
 			}
 		}
-DEBUG_LED_OFF(8);		
 	}
 	
-	// check endpoint interrupts
+	// endpoint interrupt
 	if (dwStatus & EP_SLOW) {
 		// clear EP_SLOW
 		USBDevIntClr = EP_SLOW;
@@ -471,30 +489,16 @@ DEBUG_LED_OFF(8);
 						((bEPStat & EPSTAT_EPN) ? EP_STATUS_NACKED : 0) |
 						((bEPStat & EPSTAT_PO) ? EP_STATUS_ERROR : 0);
 				// call handler
-				if (bEPStat & (1 <<5)) {
-DEBUG_LED_ON(9);		
-				}
-				if (bEPStat & (1 <<6)) {
-DEBUG_LED_ON(10);		
-				}
 				if (_apfnEPIntHandlers[i / 2] != NULL) {
+DEBUG_LED_ON(10);		
 					_apfnEPIntHandlers[i / 2](IDX2EP(i), bStat);
-				}
-DEBUG_LED_OFF(9);
 DEBUG_LED_OFF(10);
+				}
 			}
 		}
 	}
 	
-	// handle frame interrupt
-	if (dwStatus & FRAME) {
-		// clear int
-		USBDevIntClr = FRAME;
-		// call handler
-		if (_pfnFrameHandler != NULL) {
-			_pfnFrameHandler(0);	// implement counter later
-		}
-	}
+DEBUG_LED_OFF(9);		
 }
 
 
