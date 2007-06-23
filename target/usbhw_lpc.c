@@ -68,11 +68,13 @@ static TFnFrameHandler	*_pfnFrameHandler = NULL;
 /**
 	Local function to wait for a device interrupt (and clear it)
 		
-	@param [in]	dwIntr		Interrupts to wait for	
+	@param [in]	dwIntr		Bitmask of interrupts to wait for	
  */
 static void Wait4DevInt(U32 dwIntr)
 {
+	// wait for specific interrupt
 	while ((USBDevIntSt & dwIntr) != dwIntr);
+	// clear the interrupt bits
 	USBDevIntClr = dwIntr;
 }
 
@@ -321,9 +323,6 @@ int USBHwEPWrite(U8 bEP, U8 *pbBuf, int iLen)
 	
 	idx = EP2IDX(bEP);
 	
-//	DBG("<%d", iLen);
-//	DBG("<");
-
 	// set write enable for specific endpoint
 	USBCtrl = WR_EN | ((bEP & 0xF) << 2);
 	
@@ -394,9 +393,6 @@ int USBHwEPRead(U8 bEP, U8 *pbBuf, int iMaxLen)
 	USBHwCmd(CMD_EP_SELECT | idx);
 	USBHwCmd(CMD_EP_CLEAR_BUFFER);
 	
-//	DBG(">%d", dwLen);
-//	DBG(">");
-
 	return dwLen;
 }
 
@@ -520,7 +516,6 @@ BOOL USBHwInit(void)
 {
 	// configure P0.23 for Vbus sense
 	PINSEL1 = (PINSEL1 & ~(3 << 14)) | (1 << 14);	// P0.23
-	IODIR0 &= ~(1 << 23);
 	// configure P0.31 for CONNECT
 	PINSEL1 = (PINSEL1 & ~(3 << 30)) | (2 << 30);	// P0.31
 
