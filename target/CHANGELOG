@@ -1,5 +1,35 @@
+v20070727
+	20070623, bertrik
+	* target/usbhw_lpc.c: Updated function descriptions, Removed setting of direction of Vbus pin (P0.23)
+	* target/usbhw_lpc.c: Fixed bug 1681686 (iMaxLen not honored correctly in USBHwEPRead)
+
+	20070204, bertrik
+	* target/usbhw_lpc.c: Updated interrupt handling order to first FRAME, then DEV_STATE, then EP_SLOW.
+	* target/examples/main_serial.c: Reduced interrupt-flood in main_serial.c by disabling the bulk-in NAK interrupt
+	  when no more data is available and enabling it again at the start of a new frame.
+
+	20070128, bertrik
+	* target/usbhw_lpc.c: Added initialisation of interrupt priority registers.
+	* target/usbhw_lpc.c usbinit.c: Moved configuration of control EPs from usbhw_lpc.c to usbinit.c
+	* target/examples/serial_fifo.c: Added fifo_avail function to serial_fifo.
+	* target/examples/main_serial.c: Added check on FIFO (almost) full before accepting serial data from the host.
+
 	20070123, bertrik
 	* crt.s: increased IRQ stack size to prevent stack overflow (thanks to Paul Knight)
+
+	20070114: bertrik
+	* target/usbapi.h usbhw_lpc.c usbstdreq.c: Added USBHwEPGetStatus function (this replaces the more specific
+	  USBHwEPIsStalled function).
+
+	20061220: bertrik
+	* target/Makefile: Added .svn to the list of files/dirs to ignore when doing a 'make dist'.
+
+	20061211: sarahbailey
+	* target/*: Converted mixed line-endings to DOS line endings.
+	
+	20061124: bertrik
+	* target/examples/main_serial.c: USB version in device descriptor is now 1.01, to prevent confusing STALL during
+	  enumeration
 
 v20061124
 	20061112, bertrik
