@@ -1,6 +1,8 @@
 # app defs
 EXE = main.exe
-LIBUSB = "C:\Program Files\LibUSB-Win32-0.1.10.1"
+ifndef LIBUSB
+		LIBUSB = "C:\Program Files\LibUSB-Win32-0.1.10.1"
+endif
 
 # tool defs
 CFLAGS = -W -Wall -g -I$(LIBUSB)/include
