@@ -1,6 +1,10 @@
 LIBNAME	= ../usbstack
 APPNAME = main
 
+#Select target
+TARGET=LPC214x
+#TARGET=LPC23xx
+
 # Tool definitions
 CC      = arm-elf-gcc
 LD      = arm-elf-ld -v
@@ -11,8 +15,8 @@ OD		= arm-elf-objdump
 RM		= rm
 
 # Tool flags
-CFLAGS  = -I./ -I../ -c -W -Wall -Os -g -DDEBUG -mcpu=arm7tdmi
-ASFLAGS = -ahls -mapcs-32 -o crt.o
+CFLAGS  = -I./ -I../ -c -W -Wall -Os -g -DDEBUG -D$(TARGET) -mcpu=arm7tdmi
+ASFLAGS = -ahls -mapcs-32 -Wa,--defsym,$(TARGET)=1 
 LFLAGS  =  -nostartfiles --warn-common
 CPFLAGS = -O ihex
 ODFLAGS	= -x --syms
@@ -39,7 +43,7 @@ $(EXAMPLES):
 
 crt.o: crt.s
 	@ echo ".assembling"
-	$(CC) -c $(AFLAGS) -Wa,-ahlms=crt.lst crt.s -o crt.o
+	$(CC) -c $(ASFLAGS) -Wa,-ahlms=crt.lst crt.s -o crt.o
 
 clean:
 	rm -f *.hex *.elf *.o *.lst *.dmp *.map .depend

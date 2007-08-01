@@ -50,6 +50,13 @@
 #include "type.h"
 #include "usbdebug.h"
 
+#ifdef LPC214x
+#include "lpc214x.h"
+#endif
+#ifdef LPC23xx
+#include "lpc23xx.h"
+#endif
+
 #include "armVIC.h"
 
 #include "console.h"
@@ -76,13 +83,6 @@
 #define	SET_LINE_CODING			0x20
 #define	GET_LINE_CODING			0x21
 #define	SET_CONTROL_LINE_STATE	0x22
-
-// interrupts
-#define VICIntSelect   *((volatile unsigned int *) 0xFFFFF00C)
-#define VICIntEnable   *((volatile unsigned int *) 0xFFFFF010)
-#define VICVectAddr    *((volatile unsigned int *) 0xFFFFF030)
-#define VICVectAddr0   *((volatile unsigned int *) 0xFFFFF100)
-#define VICVectCntl0   *((volatile unsigned int *) 0xFFFFF200)
 
 #define	INT_VECT_NUM	0
 
@@ -392,8 +392,13 @@ int main(void)
 	// PLL and MAM
 	Initialize();
 
+#ifdef LPC214x
 	// init DBG
 	ConsoleInit(60000000 / (16 * BAUD_RATE));
+#else
+	// init DBG
+	ConsoleInit(72000000 / (16 * BAUD_RATE));
+#endif
 
 	DBG("Initialising USB stack\n");
 
@@ -422,12 +427,17 @@ int main(void)
 
 	DBG("Starting USB communication\n");
 
+#ifdef LPC214x
+	(*(&VICVectCntl0+INT_VECT_NUM)) = 0x20 | 22; // choose highest priority ISR slot 	
+	(*(&VICVectAddr0+INT_VECT_NUM)) = (int)USBIntHandler;
+#else
+  VICVectCntl22 = 0x01;
+  VICVectAddr22 = (int)USBIntHandler;
+#endif
+  
 	// set up USB interrupt
 	VICIntSelect &= ~(1<<22);               // select IRQ for USB
 	VICIntEnable |= (1<<22);
-
-	(*(&VICVectCntl0+INT_VECT_NUM)) = 0x20 | 22; // choose highest priority ISR slot 	
-	(*(&VICVectAddr0+INT_VECT_NUM)) = (int)USBIntHandler;
 	
 	enableIRQ();
 

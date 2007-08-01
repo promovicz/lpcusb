@@ -1,5 +1,12 @@
 LIBNAME	= usbstack
 
+# Select your target
+TARGET = LPC214x
+#TARGET = LPC23xx
+
+# If you are using port B on the LPC2378 uncomment out the next line
+#LPC2378_PORT = -DLPC2378_PORTB
+
 # Package definitions
 PKG_NAME	= target
 DATE		= $$(date +%Y%m%d)
@@ -14,7 +21,7 @@ OD		= arm-elf-objdump
 RM		= rm
 TAR		= tar
 
-CFLAGS  = -I./ -I../ -c -W -Wall -Os -g -DDEBUG -mcpu=arm7tdmi
+CFLAGS  = -I./ -I../ -c -W -Wall -Os -g -DDEBUG -D$(TARGET) $(LPC2378_PORT) -mcpu=arm7tdmi
 ARFLAGS = -rcs
 
 LIBSRCS = usbhw_lpc.c usbcontrol.c usbstdreq.c usbinit.c

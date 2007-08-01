@@ -36,17 +36,12 @@
  **********************************************************/
 
 #include "startup.h"
-
-
-#define MAMCR		*(volatile unsigned int *)0xE01FC000
-#define MAMTIM		*(volatile unsigned int *)0xE01FC004
-
-#define PLLCON		*(volatile unsigned int *)0xE01FC080
-#define PLLCFG		*(volatile unsigned int *)0xE01FC084
-#define PLLSTAT		*(volatile unsigned int *)0xE01FC088
-#define PLLFEED		*(volatile unsigned int *)0xE01FC08C
-
-#define VPBDIV		*(volatile unsigned int *)0xE01FC100
+#ifdef LPC214x
+#include "lpc214x.h"
+#endif
+#ifdef LPC23xx
+#include "lpc23xx.h"
+#endif
 
 void IRQ_Routine (void)   __attribute__ ((interrupt("IRQ")));
 void FIQ_Routine (void)   __attribute__ ((interrupt("FIQ")));
@@ -80,7 +75,13 @@ void UNDEF_Routine (void) {
                       Initialize
 **********************************************************/
 
+#ifdef LPC214x
 #define PLOCK 0x400
+#endif
+
+#ifdef LPC23xx
+#define PLOCK (1 << 26)
+#endif
 
 static void feed(void)
 {
@@ -128,8 +129,29 @@ void Initialize(void)
 	//             this is done in the short function feed() below
 	//
    
+#ifdef LPC23xx
+
+  SCS |= 1;
+  PINSEL10 = 0;
+  FIO2DIR |= 0x00FF; // Enable LED output on the KEIL MCB2300 board
+  FIO2CLR |= 0xFF; // Turn off all LEDs
+
+  // Select the CPU clock divider
+  CCLKCFG = 0x03;
+
+  /* Start main oscillator */
+  SCS |= (1 << 5);
+
+  while(!(SCS & (1<<6)));
+
+  CLKSRCSEL = 1;
+
+	// Setting Multiplier and Divider values
+ 	PLLCFG = (0 << 16) | (5 << 0);
+#else
 	// Setting Multiplier and Divider values
   	PLLCFG = 0x24;
+#endif
   	feed();
   
 	// Enabling the PLL */	
@@ -138,16 +160,25 @@ void Initialize(void)
   
 	// Wait for the PLL to lock to set frequency
 	while(!(PLLSTAT & PLOCK)) ;
-  
+
 	// Connect the PLL as the clock source
 	PLLCON = 0x3;
 	feed();
+  
+#ifdef LPC23xx
+  // Wait for the PLL to connect
+  while(!(PLLSTAT & (1 << 25)));
+#endif
   
 	// Enabling MAM and setting number of clocks used for Flash memory fetch
 	MAMTIM = 0x3;
 	MAMCR = 0x2;
   
+#ifdef LPC23xx
+  PCLKSEL0 = (1 << 6); /* Set UART0 clock to cclk */
+#else
 	// Setting peripheral Clock (pclk) to System Clock (cclk)
 	VPBDIV = 0x1;
+#endif
 }
 

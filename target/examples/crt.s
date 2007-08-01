@@ -47,7 +47,11 @@ _vectors:       ldr     PC, Reset_Addr
                 ldr     PC, PAbt_Addr
                 ldr     PC, DAbt_Addr
                 nop							/* Reserved Vector (holds Philips ISP checksum) */
+.ifdef LPC214x
                 ldr     PC, [PC,#-0xFF0]	/* see page 71 of "Insiders Guide to the Philips ARM7-Based Microcontrollers" by Trevor Martin  */
+.else
+                ldr     PC, [PC,#-0x120]	/* see page 71 of "Insiders Guide to the Philips ARM7-Based Microcontrollers" by Trevor Martin  */
+.endif
                 ldr     PC, FIQ_Addr
 
 Reset_Addr:     .word   Reset_Handler		/* defined in this module below  */

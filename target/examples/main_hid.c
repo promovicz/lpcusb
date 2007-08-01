@@ -32,7 +32,6 @@
 #include "usbapi.h"
 #include "startup.h"
 
-
 #define INTR_IN_EP		0x81
 
 #define MAX_PACKET_SIZE	64
@@ -272,14 +271,19 @@ int main(void)
 	// PLL and MAM
 	Initialize();
 
+#ifdef LPC214x
 	// init DBG
 	ConsoleInit(60000000 / (16 * BAUD_RATE));
+#else
+	// init DBG
+	ConsoleInit(72000000 / (16 * BAUD_RATE));
+#endif
 
 	DBG("Initialising USB stack\n");
-	
+
 	// initialise stack
 	USBInit();
-	
+
 	// register device descriptors
 	USBRegisterDescriptors(abDescriptors);
 

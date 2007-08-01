@@ -32,6 +32,12 @@
 
 #include "type.h"
 #include "usbdebug.h"
+#ifdef LPC214x
+#include "lpc214x.h"
+#endif
+#ifdef LPC23xx
+#include "lpc23xx.h"
+#endif
 #include "usbhw_lpc.h"
 #include "usbapi.h"
 
@@ -42,9 +48,15 @@
 #endif
 
 #ifdef DEBUG_LED
+#ifdef LPC214x
 #define DEBUG_LED_ON(x)		IOCLR0 = (1 << x);
 #define DEBUG_LED_OFF(x)	IOSET0 = (1 << x);
 #define DEBUG_LED_INIT(x)	PINSEL0 &= ~(0x3 << (2*x)); IODIR0 |= (1 << x); DEBUG_LED_OFF(x);
+#else
+#define DEBUG_LED_ON(x)		FIO2SET = (1 << (x-8));
+#define DEBUG_LED_OFF(x)	FIO2CLR = (1 << (x-8));
+#define DEBUG_LED_INIT(x)	SCS |= 1; PINSEL10 = 0; FIO2DIR |= (1 << (x-8)); DEBUG_LED_OFF(x);
+#endif
 #else
 #define DEBUG_LED_INIT(x)	/**< LED initialisation macro */
 #define DEBUG_LED_ON(x)		/**< turn LED on */
@@ -134,7 +146,7 @@ static U8 USBHwCmdRead(U8 bCmd)
 	'Realizes' an endpoint, meaning that buffer space is reserved for
 	it. An endpoint needs to be realised before it can be used.
 		
-	From experiments, it appears that a USB reset causes USBReEP to
+	From experiments, it appears that a USB reset causes USBReEp to
 	re-initialise to 3 (= just the control endpoints).
 	However, a USB bus reset does not disturb the USBMaxPSize settings.
 		
@@ -143,7 +155,7 @@ static U8 USBHwCmdRead(U8 bCmd)
  */
 static void USBHwEPRealize(int idx, U16 wMaxPSize)
 {
-	USBReEP |= (1 << idx);
+	USBReEp |= (1 << idx);
 	USBEpInd = idx;
 	USBMaxPSize = wMaxPSize;
 	Wait4DevInt(EP_RLZED);
@@ -257,6 +269,19 @@ void USBHwSetAddress(U8 bAddr)
  */
 void USBHwConnect(BOOL fConnect)
 {
+#ifdef LPC23xx
+#ifndef LPC2378_PORTB
+  if(fConnect)
+    FIO2CLR = (1<<9);
+  else
+    FIO2SET = (1<<9);
+#else
+  if(fConnect)
+    FIO0CLR = (1<<14);
+  else
+    FIO0SET = (1<<14);
+#endif
+#endif
 	USBHwCmdWrite(CMD_DEV_STATUS, fConnect ? CON : 0);
 }
 
@@ -516,6 +541,8 @@ DEBUG_LED_OFF(9);
  */
 BOOL USBHwInit(void)
 {
+#ifdef LPC214x
+	
 	// configure P0.23 for Vbus sense
 	PINSEL1 = (PINSEL1 & ~(3 << 14)) | (1 << 14);	// P0.23
 	// configure P0.31 for CONNECT
@@ -523,7 +550,7 @@ BOOL USBHwInit(void)
 
 	// enable PUSB
 	PCONP |= (1 << 31);		
-	
+
 	// initialise PLL
 	PLL1CON = 1;			// enable PLL
 	PLL1CFG = (1 << 5) | 3; // P = 2, M = 4
@@ -534,6 +561,50 @@ BOOL USBHwInit(void)
 	PLL1CON = 3;			// enable and connect
 	PLL1FEED = 0xAA;
 	PLL1FEED = 0x55;
+
+#endif
+
+#ifdef LPC23xx
+#ifdef LPC2378_PORTB
+  PINSEL1 = (PINSEL1 & ~(3 << 30)) | (1 << 30);
+  PINSEL3 = (PINSEL3 & ~(3 << 28)) | (2 << 28);
+  /* Due to a bug in the LPC23xx chips, the connection functionality must be
+   * simulated using GPIO. Hopefully for production this will be fixed and the
+   * commented out code will work */
+  //PINSEL0 = (PINSEL0 & ~((3 << 26) | (3 << 28))) | (1 << 26) | (1 << 28); /* Doesn't work due to bug in chip */
+  PINSEL0 = (PINSEL0 & ~((3 << 26) | (3 << 28))) | (1 << 26);
+  FIO0DIR |= (1<<14); /* Set pin to output */
+  FIO0SET = (1<<14); /* Set output high to disconnect */
+#else
+  PINSEL1 = (PINSEL1 & ~((3 << 26) | (3 << 28))) | (1 << 26) | (1 << 28);
+  PINSEL3 = (PINSEL3 & ~((3 << 4) | (3 << 28))) | (1 << 4) | (2 << 28);
+  /* Due to a bug in the LPC23xx chips, the connection functionality must be
+   * simulated using GPIO. Hopefully for production this will be fixed and the
+   * commented out code will work */
+  //PINSEL4 = (PINSEL4 & ~(3 << 18)) | (1 << 18); /* Doesn't work due to bug in chip */
+  PINSEL4 = (PINSEL4 & ~(3 << 18)); /* Use pin as GPIO */
+  FIO2DIR |= (1<<9); /* Set pin to output */
+  FIO2SET = (1<<9); /* Set output high to disconnect */
+#endif
+
+	// enable PUSB
+	PCONP |= (1 << 31);		
+
+  /* The LPC23xx uses a single PLL, and has multiple clock dividers for each
+   * peripheral. These settings assume a PLL frequency of 288 MHz */
+
+  USBCLKCFG = 5; /* 288 MHz / 48 MHz = 6 */
+
+#ifdef LPC2378_PORTB
+  USBClkCtrl = (1 << 1) | (1 << 3) | (1 << 4); /* Enable the clocks */
+  while(!(USBClkSt & ((1 << 1) | (1 << 3) | (1 << 4))));
+  USBPortSel = 0x3; /* Set LPC to use USB Port B pins */
+#else
+  USBClkCtrl = (1 << 1) | (1 << 4); /* Enable the clocks */
+  while(!(USBClkSt & ((1 << 1) | (1 << 4))));
+#endif
+
+#endif
 	
 	// disable/clear all interrupts for now
 	USBDevIntEn = 0;

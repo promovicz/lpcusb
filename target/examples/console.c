@@ -32,22 +32,21 @@
 */
 
 #include "console.h"
-
-#define PINSEL0		*(volatile unsigned int *)0xE002C000
-
-#define U0THR		*(volatile unsigned int *)0xE000C000
-#define U0RBR		*(volatile unsigned int *)0xE000C000
-#define U0DLL		*(volatile unsigned int *)0xE000C000
-#define U0DLM		*(volatile unsigned int *)0xE000C004
-#define U0FCR		*(volatile unsigned int *)0xE000C008
-#define U0LCR		*(volatile unsigned int *)0xE000C00C
-#define U0LSR		*(volatile unsigned int *)0xE000C014
-
+#ifdef LPC214x
+#include "lpc214x.h"
+#endif
+#ifdef LPC23xx
+#include "lpc23xx.h"
+#endif
 
 /* Initialize Serial Interface       */
 void ConsoleInit(int iDivider)  
 {               
+#ifdef LPC214x
 	PINSEL0 = (PINSEL0 & ~0x0000000F) | 0x00000005;	/* Enable RxD0 and TxD0              */
+#else
+  PINSEL0 = (PINSEL0 & ~0x000000F0) | 0x00000050;	/* Enable RxD0 and TxD0              */
+#endif
 	U0LCR = 0x83;                          			/* 8 bits, no Parity, 1 Stop bit     */
 	U0DLL = iDivider & 0xFF;						/* set divider / baud rate */
 	U0DLM = iDivider >> 8;

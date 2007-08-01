@@ -240,8 +240,13 @@ int main(void)
 	// PLL and MAM
 	Initialize();
 
+#ifdef LPC214x
 	// init DBG
 	ConsoleInit(60000000 / (16 * BAUD_RATE));
+#else
+	// init DBG
+	ConsoleInit(72000000 / (16 * BAUD_RATE));
+#endif
 
 	DBG("Initialising USB stack\n");
 	
