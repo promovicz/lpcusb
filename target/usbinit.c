@@ -32,6 +32,8 @@
 
 #include "type.h"
 #include "usbdebug.h"
+
+#include "usbhw_lpc.h"
 #include "usbapi.h"
 
 
