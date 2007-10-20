@@ -150,7 +150,7 @@ U8 * SCSIHandleCmd(U8 *pbCDB, U8 iCDBLen, int *piRspLen, BOOL *pfDevIn)
 	// check CDB length
 	bGroupCode = (pCDB->bOperationCode >> 5) & 0x7;
 	if (iCDBLen < aiCDBLen[bGroupCode]) {
-		DBG("Invalid CBD len (expected %d)!\n", aiCDBLen[bGroupCode]);
+		DBG("Invalid CDB len (expected %d)!\n", aiCDBLen[bGroupCode]);
 		return NULL;
 	}
 
@@ -205,13 +205,16 @@ U8 * SCSIHandleCmd(U8 *pbCDB, U8 iCDBLen, int *piRspLen, BOOL *pfDevIn)
 		break;
 
 	case SCSI_CMD_VERIFY_10:
-		DBG("VERIFY10\n");
+		dwLBA = (pbCDB[2] << 24) | (pbCDB[3] << 16) | (pbCDB[4] << 8) | (pbCDB[5]);
+		dwLen = (pbCDB[7] << 8) | pbCDB[8];
+		DBG("VERIFY10, LBA=%d, len=%d\n", dwLBA, dwLen);
+		*piRspLen = 0;
 		if ((pbCDB[1] & (1 << 1)) != 0) {
 			// we don't support BYTCHK
 			DBG("BYTCHK not supported\n");
+			dwSense = INVALID_FIELD_IN_CDB;
 			return NULL;
 		}
-		*piRspLen = 0;
 		break;
 	
 	default:
@@ -225,7 +228,6 @@ U8 * SCSIHandleCmd(U8 *pbCDB, U8 iCDBLen, int *piRspLen, BOOL *pfDevIn)
 		*piRspLen = 0;
 		return NULL;
 	}
-	
 	
 	return abBlockBuf;
 }
@@ -258,6 +260,7 @@ U8 * SCSIHandleData(U8 *pbCDB, U8 iCDBLen, U8 *pbData, U32 dwOffset)
 	// test unit ready
 	case SCSI_CMD_TEST_UNIT_READY:
 		if (dwSense != 0) {
+			DBG("UNIT NOT READY!\n");
 			return NULL;
 		}
 		break;
