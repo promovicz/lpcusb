@@ -99,6 +99,8 @@ typedef struct {
 static TLineCoding LineCoding = {115200, 0, 0, 8};
 static U8 abBulkBuf[64];
 static U8 abClassReqData[8];
+static volatile BOOL fBulkInBusy;
+static volatile BOOL fChainDone;
 
 static U8 txdata[VCOM_FIFO_SIZE];
 static U8 rxdata[VCOM_FIFO_SIZE];
@@ -252,6 +254,47 @@ static void BulkOut(U8 bEP, U8 bEPStatus)
 
 
 /**
+	Sends the next packet in chain of packets to the host
+		
+	@param [in] bEP
+	@param [in] bEPStatus
+ */
+static void SendNextBulkIn(U8 bEP, BOOL fFirstPacket)
+{
+	int iLen;
+
+	// this transfer is done
+	fBulkInBusy = FALSE;
+	
+	// first packet?
+	if (fFirstPacket) {
+		fChainDone = FALSE;
+	}
+
+	// last packet?
+	if (fChainDone) {
+		return;
+	}
+	
+	// get up to MAX_PACKET_SIZE bytes from transmit FIFO into intermediate buffer
+	for (iLen = 0; iLen < MAX_PACKET_SIZE; iLen++) {
+		if (!fifo_get(&txfifo, &abBulkBuf[iLen])) {
+			break;
+		}
+	}
+	
+	// send over USB
+	USBHwEPWrite(bEP, abBulkBuf, iLen);
+	fBulkInBusy = TRUE;
+
+	// was this a short packet?
+	if (iLen < MAX_PACKET_SIZE) {
+		fChainDone = TRUE;
+	}
+}
+
+
+/**
 	Local function to handle outgoing bulk data
 		
 	@param [in] bEP
@@ -259,26 +302,7 @@ static void BulkOut(U8 bEP, U8 bEPStatus)
  */
 static void BulkIn(U8 bEP, U8 bEPStatus)
 {
-	int i, iLen;
-
-	if (fifo_avail(&txfifo) == 0) {
-		// no more data, disable further NAK interrupts until next USB frame
-		USBHwNakIntEnable(0);
-		return;
-	}
-
-	// get bytes from transmit FIFO into intermediate buffer
-	for (i = 0; i < MAX_PACKET_SIZE; i++) {
-		if (!fifo_get(&txfifo, &abBulkBuf[i])) {
-			break;
-		}
-	}
-	iLen = i;
-	
-	// send over USB
-	if (iLen > 0) {
-		USBHwEPWrite(bEP, abBulkBuf, iLen);
-	}
+	SendNextBulkIn(bEP, FALSE);
 }
 
 
@@ -333,6 +357,8 @@ void VCOM_init(void)
 {
 	fifo_init(&txfifo, txdata);
 	fifo_init(&rxfifo, rxdata);
+	fBulkInBusy = FALSE;
+	fChainDone = TRUE;
 }
 
 
@@ -372,14 +398,38 @@ static void USBIntHandler(void)
 	VICVectAddr = 0x00;    // dummy write to VIC to signal end of ISR 	
 }
 
+/**
+	USB frame interrupt handler
+	
+	Called every milisecond by the hardware driver.
+	
+	This function is responsible for sending the first of a chain of packets
+	to the host. A chain is always terminated by a short packet, either a
+	packet shorter than the maximum packet size or a zero-length packet
+	(as required by the windows usbser.sys driver).
 
+ */
 static void USBFrameHandler(U16 wFrame)
 {
-	if (fifo_avail(&txfifo) > 0) {
-		// data available, enable NAK interrupt on bulk in
-		USBHwNakIntEnable(INACK_BI);
+	if (!fBulkInBusy && (fifo_avail(&txfifo) != 0)) {
+		// send first packet
+		SendNextBulkIn(BULK_IN_EP, TRUE);
 	}
 }
+
+
+/**
+	USB device status handler
+	
+	Resets state machine when a USB reset is received.
+ */
+static void USBDevIntHandler(U8 bDevStatus)
+{
+	if ((bDevStatus & DEV_STATUS_RESET) != 0) {
+		fBulkInBusy = FALSE;
+	}
+}
+
 
 /*************************************************************************
 	main
@@ -418,9 +468,9 @@ int main(void)
 	
 	// register frame handler
 	USBHwRegisterFrameHandler(USBFrameHandler);
-
-	// enable bulk-in interrupts on NAKs
-	USBHwNakIntEnable(INACK_BI);
+	
+	// register device event handler
+	USBHwRegisterDevIntHandler(USBDevIntHandler);
 
 	// initialise VCOM
 	VCOM_init();
