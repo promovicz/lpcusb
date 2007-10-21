@@ -566,25 +566,25 @@ BOOL USBHwInit(void)
 
 #ifdef LPC23xx
 #ifdef LPC2378_PORTB
-  PINSEL1 = (PINSEL1 & ~(3 << 30)) | (1 << 30);
-  PINSEL3 = (PINSEL3 & ~(3 << 28)) | (2 << 28);
-  /* Due to a bug in the LPC23xx chips, the connection functionality must be
-   * simulated using GPIO. Hopefully for production this will be fixed and the
-   * commented out code will work */
-  //PINSEL0 = (PINSEL0 & ~((3 << 26) | (3 << 28))) | (1 << 26) | (1 << 28); /* Doesn't work due to bug in chip */
-  PINSEL0 = (PINSEL0 & ~((3 << 26) | (3 << 28))) | (1 << 26);
-  FIO0DIR |= (1<<14); /* Set pin to output */
-  FIO0SET = (1<<14); /* Set output high to disconnect */
+	PINSEL1 = (PINSEL1 & ~(3 << 30)) | (1 << 30);
+	PINSEL3 = (PINSEL3 & ~(3 << 28)) | (2 << 28);
+	/* Due to a bug in the LPC23xx chips, the connection functionality must be
+	* simulated using GPIO. Hopefully for production this will be fixed and the
+	* commented out code will work */
+	//PINSEL0 = (PINSEL0 & ~((3 << 26) | (3 << 28))) | (1 << 26) | (1 << 28); /* Doesn't work due to bug in chip */
+	PINSEL0 = (PINSEL0 & ~((3 << 26) | (3 << 28))) | (1 << 26);
+	FIO0DIR |= (1<<14); /* Set pin to output */
+	FIO0SET = (1<<14); /* Set output high to disconnect */
 #else
-  PINSEL1 = (PINSEL1 & ~((3 << 26) | (3 << 28))) | (1 << 26) | (1 << 28);
-  PINSEL3 = (PINSEL3 & ~((3 << 4) | (3 << 28))) | (1 << 4) | (2 << 28);
-  /* Due to a bug in the LPC23xx chips, the connection functionality must be
-   * simulated using GPIO. Hopefully for production this will be fixed and the
-   * commented out code will work */
-  //PINSEL4 = (PINSEL4 & ~(3 << 18)) | (1 << 18); /* Doesn't work due to bug in chip */
-  PINSEL4 = (PINSEL4 & ~(3 << 18)); /* Use pin as GPIO */
-  FIO2DIR |= (1<<9); /* Set pin to output */
-  FIO2SET = (1<<9); /* Set output high to disconnect */
+	PINSEL1 = (PINSEL1 & ~((3 << 26) | (3 << 28))) | (1 << 26) | (1 << 28);
+	PINSEL3 = (PINSEL3 & ~((3 << 4) | (3 << 28))) | (1 << 4) | (2 << 28);
+	/* Due to a bug in the LPC23xx chips, the connection functionality must be
+	* simulated using GPIO. Hopefully for production this will be fixed and the
+	* commented out code will work */
+	//PINSEL4 = (PINSEL4 & ~(3 << 18)) | (1 << 18); /* Doesn't work due to bug in chip */
+	PINSEL4 = (PINSEL4 & ~(3 << 18)); /* Use pin as GPIO */
+	FIO2DIR |= (1<<9); /* Set pin to output */
+	FIO2SET = (1<<9); /* Set output high to disconnect */
 #endif
 
 	// enable PUSB
@@ -593,15 +593,15 @@ BOOL USBHwInit(void)
   /* The LPC23xx uses a single PLL, and has multiple clock dividers for each
    * peripheral. These settings assume a PLL frequency of 288 MHz */
 
-  USBCLKCFG = 5; /* 288 MHz / 48 MHz = 6 */
+	USBCLKCFG = 5; /* 288 MHz / 48 MHz = 6 */
 
 #ifdef LPC2378_PORTB
-  USBClkCtrl = (1 << 1) | (1 << 3) | (1 << 4); /* Enable the clocks */
-  while(!(USBClkSt & ((1 << 1) | (1 << 3) | (1 << 4))));
-  USBPortSel = 0x3; /* Set LPC to use USB Port B pins */
+	USBClkCtrl = (1 << 1) | (1 << 3) | (1 << 4); /* Enable the clocks */
+	while (!(USBClkSt & ((1 << 1) | (1 << 3) | (1 << 4))));
+	USBPortSel = 0x3; /* Set LPC to use USB Port B pins */
 #else
-  USBClkCtrl = (1 << 1) | (1 << 4); /* Enable the clocks */
-  while(!(USBClkSt & ((1 << 1) | (1 << 4))));
+	USBClkCtrl = (1 << 1) | (1 << 4); /* Enable the clocks */
+	while (!(USBClkSt & ((1 << 1) | (1 << 4))));
 #endif
 
 #endif
