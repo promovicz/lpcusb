@@ -47,6 +47,7 @@
 #include "usbdebug.h"
 #include "usbstruct.h"
 #include "usbapi.h"
+#include "usbhw_lpc.h"
 
 #define MAX_DESC_HANDLERS	4		/**< device, interface, endpoint, other */
 
