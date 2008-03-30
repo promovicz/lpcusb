@@ -27,12 +27,9 @@
 
 #include "type.h"
 
-#define SPI_PRESCALE_MIN  8
-
 void	SPIInit(void);
-void	SPISetSpeed(U8 speed);
+void	SPISetSpeed(int iFrequency);
 
-U8		SPISend(U8 outgoing);
-void	SPISendN(U8 *pbBuf, int iLen);
-void	SPIRecvN(U8 *pbBuf, int iLen);
+void	SPITransfer(int iCount, U8 *pbTxData, U8 *pbRxData);
+void	SPITick(int iCount);
 

@@ -29,33 +29,11 @@
 #include "type.h"
 #include "debug.h"
 
+#include "lpc214x.h"
+#include "hal.h"
+
 #include "spi.h"
 /*****************************************************************************/
-
-/* SPI0 (Serial Peripheral Interface 0) */
-#define S0SPCR         (*((volatile unsigned char *) 0xE0020000))
-#define S0SPSR         (*((volatile unsigned char *) 0xE0020004))
-#define S0SPDR         (*((volatile unsigned char *) 0xE0020008))
-#define S0SPCCR        (*((volatile unsigned char *) 0xE002000C))
-#define S0SPTCR        (*((volatile unsigned char *) 0xE0020010))
-#define S0SPTSR        (*((volatile unsigned char *) 0xE0020014))
-#define S0SPTOR        (*((volatile unsigned char *) 0xE0020018))
-#define S0SPINT        (*((volatile unsigned char *) 0xE002001C))
-
-/* General Purpose Input/Output (GPIO) */
-#define IOPIN0         (*((volatile unsigned long *) 0xE0028000))
-#define IOSET0         (*((volatile unsigned long *) 0xE0028004))
-#define IODIR0         (*((volatile unsigned long *) 0xE0028008))
-#define IOCLR0         (*((volatile unsigned long *) 0xE002800C))
-#define IOPIN1         (*((volatile unsigned long *) 0xE0028010))
-#define IOSET1         (*((volatile unsigned long *) 0xE0028014))
-#define IODIR1         (*((volatile unsigned long *) 0xE0028018))
-#define IOCLR1         (*((volatile unsigned long *) 0xE002801C))
-
-/* Pin Connect Block */
-#define PINSEL0        (*((volatile unsigned long *) 0xE002C000))
-#define PINSEL1        (*((volatile unsigned long *) 0xE002C004))
-#define PINSEL2        (*((volatile unsigned long *) 0xE002C014))
 
 
 // SP0SPCR  Bit-Definitions
@@ -82,109 +60,82 @@
 #define SELECT_CARD()   IOCLR0 = (1 << SPI_SS_PIN)
 #define UNSELECT_CARD() IOSET0 = (1 << SPI_SS_PIN)
 
-
-
-/*****************************************************************************/
+#define SPI_IDLE_CHAR	0xFF
 
 /*****************************************************************************/
 
-// Utility-functions which does not toogle CS.
-// Only needed during card-init. During init
-// the automatic chip-select is disabled for SSP
 
-static U8 my_SPISend(U8 outgoing)
+void SPISetSpeed(int iFrequency)
 {
-	S0SPDR = outgoing;
-	while (!(S0SPSR & (1 << SPIF)));
-	return S0SPDR;
-}
+	int iClock, iDivider;
 
-/*****************************************************************************/
-
-void SPISetSpeed(U8 speed)
-{
-	speed &= 0xFE;
-	if (speed < SPI_PRESCALE_MIN) {
-		speed = SPI_PRESCALE_MIN;
-	}
-	SPI_PRESCALE_REG = speed;
+	// get base SPI clock
+	iClock = HalSysGetPCLK() / 2;
+	// calculate divider (strictly round up)
+	iDivider = (iClock + iFrequency - 1) / iFrequency;
+	// should be at least 4
+	iDivider = MAX(4, iDivider);
+	// set it
+	S0SPCCR = iDivider << 1;
+	
+	DBG("Configured SPI0 for %d kHz\n", iClock / (1000 * iDivider));
 }
 
 
 void SPIInit(void)
 {
-	U8 i;
-
-	DBG("spiInit for SPI(0)\n");
+	// enable SPI
+	PCONP |= PCSPI0;
 
 	// setup GPIO
-	SPI_IODIR |= (1 << SPI_SCK_PIN) | (1 << SPI_MOSI_PIN) | (1 << SPI_SS_PIN);
-	SPI_IODIR &= ~(1 << SPI_MISO_PIN);
+	UNSELECT_CARD();
+	SPI_IODIR |= (1 << SPI_SS_PIN);
 
 	// reset Pin-Functions  
-	SPI_PINSEL &= ~((3 << SPI_SCK_FUNCBIT) | (3 << SPI_MISO_FUNCBIT) | (3 << SPI_MOSI_FUNCBIT));
-	SPI_PINSEL |= ((1 << SPI_SCK_FUNCBIT) | (1 << SPI_MISO_FUNCBIT) | (1 << SPI_MOSI_FUNCBIT));
-
-	PINSEL1 &= ~(3 << (SPI_SS_FUNCBIT - 32));
-	PINSEL1 |= (0 << (SPI_SS_FUNCBIT - 32));
-
-	// set Chip-Select high - unselect card
-	UNSELECT_CARD();
+	HalPinSelect(SPI_SCK_PIN,	1);	// SPI
+	HalPinSelect(SPI_MISO_PIN,	1);	// SPI
+	HalPinSelect(SPI_MOSI_PIN,	1);	// SPI
+	HalPinSelect(SPI_SS_PIN,	0);	// GPIO
 
 	// enable SPI-Master
-	S0SPCR = (1 << MSTR) | (0 << CPOL);	// TODO: check CPOL
-
-	// low speed during init
-	SPISetSpeed(254);
-
-	/* Send 20 spi commands with card not selected */
-	for (i = 0; i < 21; i++) {
-		my_SPISend(0xff);
-	}
+	S0SPCR = (1 << MSTR) | (0 << CPOL);
 }
 
 /*****************************************************************************/
 
-/*****************************************************************************/
-
-U8 SPISend(U8 outgoing)
-{
-	U8 incoming;
-
-	SELECT_CARD();
-	S0SPDR = outgoing;
-	while (!(S0SPSR & (1 << SPIF)));
-	incoming = S0SPDR;
-	UNSELECT_CARD();
-
-	return incoming;
-}
-
-
-void SPISendN(U8 * pbBuf, int iLen)
+void SPITransfer(int iCount, U8 *pbTxData, U8 *pbRxData)
 {
 	int i;
 
 	SELECT_CARD();
-	for (i = 0; i < iLen; i++) {
-		S0SPDR = pbBuf[i];
-		while (!(S0SPSR & (1 << SPIF)));
+	for (i = 0; i < iCount; i++) {
+		// send byte
+		if (pbTxData != NULL) {
+			S0SPDR = *pbTxData++;
+		}
+		else {
+			S0SPDR = SPI_IDLE_CHAR;
+		}
+		// wait until done
+		while( !(S0SPSR & (1<<SPIF)) ) ;
+		// store received byte
+		if (pbRxData != NULL) {
+			*pbRxData++ = S0SPDR;
+		}
 	}
 	UNSELECT_CARD();
 }
 
 
-void SPIRecvN(U8 * pbBuf, int iLen)
+void SPITick(int iCount)
 {
 	int i;
-
-	SELECT_CARD();
-	for (i = 0; i < iLen; i++) {
-		S0SPDR = 0xFF;
-		while (!(S0SPSR & (1 << SPIF)));
-		pbBuf[i] = S0SPDR;
-	}
+	
 	UNSELECT_CARD();
+	for (i = 0; i < iCount; i++) {
+		S0SPDR = SPI_IDLE_CHAR;
+		while (!(S0SPSR & (1 << SPIF)));
+	}
 }
 
 /*****************************************************************************/

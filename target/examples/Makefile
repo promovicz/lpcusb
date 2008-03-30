@@ -23,7 +23,7 @@ ODFLAGS	= -x --syms
 
 LINKFILE	= lpc2148-rom.ld
 
-CSRCS	= startup.c printf.c console.c
+CSRCS	= halsys.c printf.c console.c
 OBJS 	= crt.o $(CSRCS:.c=.o)
 
 EXAMPLES = hid serial msc custom
@@ -32,7 +32,7 @@ all: depend $(EXAMPLES)
 
 hid: 	$(OBJS) main_hid.o $(LIBNAME).a
 serial:	$(OBJS) main_serial.o serial_fifo.o armVIC.o $(LIBNAME).a
-msc:	$(OBJS) main_msc.o msc_bot.o msc_scsi.o blockdev_sd.o lpc2000_spi.o $(LIBNAME).a
+msc:	$(OBJS) main_msc.o msc_bot.o msc_scsi.o blockdev_sd.o sdcard.o lpc2000_spi.o $(LIBNAME).a
 custom:	$(OBJS) main_custom.o $(LIBNAME).a
 
 $(EXAMPLES):
