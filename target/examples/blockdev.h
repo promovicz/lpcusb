@@ -30,7 +30,7 @@
 
 BOOL BlockDevInit(void);
 
-BOOL BlockDevWrite(U32 dwAddress, U8* pbBuf);
-BOOL BlockDevRead(U32 dwAddress, U8* pbBuf);
+BOOL BlockDevWrite(U32 dwBlock, U8* pbBuf);
+BOOL BlockDevRead(U32 dwBlock, U8* pbBuf);
 
 BOOL BlockDevGetSize(U32 *pdwDriveSize);
