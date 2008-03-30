@@ -63,6 +63,17 @@
 #define S0SPTOR			*(volatile unsigned int *)0xE0020018
 #define S0SPINT			*(volatile unsigned int *)0xE002001C
 
+/* SSP Controller */
+#define SSPCR0			*(volatile unsigned int *)0xE0068000
+#define SSPCR1			*(volatile unsigned int *)0xE0068004
+#define SSPDR			*(volatile unsigned int *)0xE0068008
+#define SSPSR			*(volatile unsigned int *)0xE006800C
+#define SSPCPSR			*(volatile unsigned int *)0xE0068010
+#define SSPIMSC			*(volatile unsigned int *)0xE0068014
+#define SSPRIS			*(volatile unsigned int *)0xE0068018
+#define SSPMIS			*(volatile unsigned int *)0xE006801C
+#define SSPICR			*(volatile unsigned int *)0xE0068020
+
 // interrupts
 #define VICIntSelect	*(volatile unsigned int *)0xFFFFF00C
 #define VICIntEnable	*(volatile unsigned int *)0xFFFFF010
