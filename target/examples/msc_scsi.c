@@ -95,7 +95,7 @@ static const U8 abSense[] = { 0x70, 0x00, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x0A,
 							  0x00, 0x00 };
 
 //	Buffer for holding one block of disk data
-static U8 abBlockBuf[512];
+static U8 abBlockBuf[BLOCKSIZE];
 
 
 typedef struct {
@@ -290,7 +290,7 @@ U8 * SCSIHandleData(U8 *pbCDB, U8 iCDBLen, U8 *pbData, U32 dwOffset)
 		// get size of drive (bytes)
 		BlockDevGetSize(&dwDevSize);
 		// calculate highest LBA
-		dwMaxBlock = (dwDevSize - 1) / 512;
+		dwMaxBlock = (dwDevSize - 1) / BLOCKSIZE;
 		
 		pbData[0] = (dwMaxBlock >> 24) & 0xFF;
 		pbData[1] = (dwMaxBlock >> 16) & 0xFF;
