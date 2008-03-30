@@ -28,9 +28,9 @@
 #include "type.h"
 #include "debug.h"
 
+#include "hal.h"
 #include "console.h"
 #include "usbapi.h"
-#include "startup.h"
 
 #define INTR_IN_EP		0x81
 
@@ -269,7 +269,7 @@ static void HandleFrame(U16 wFrame)
 int main(void)
 {
 	// PLL and MAM
-	Initialize();
+	HalSysInit();
 
 #ifdef LPC214x
 	// init DBG

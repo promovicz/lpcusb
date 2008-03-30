@@ -59,9 +59,9 @@
 
 #include "armVIC.h"
 
+#include "hal.h"
 #include "console.h"
 #include "usbapi.h"
-#include "startup.h"
 
 #include "serial_fifo.h"
 
@@ -440,7 +440,7 @@ int main(void)
 	int c;
 	
 	// PLL and MAM
-	Initialize();
+	HalSysInit();
 
 #ifdef LPC214x
 	// init DBG

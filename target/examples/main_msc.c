@@ -28,9 +28,9 @@
 #include "type.h"
 #include "debug.h"
 
+#include "hal.h"
 #include "console.h"
 #include "usbapi.h"
-#include "startup.h"
 
 #include "msc_bot.h"
 #include "blockdev.h"
@@ -167,7 +167,7 @@ static BOOL HandleClassRequest(TSetupPacket *pSetup, int *piLen, U8 **ppbData)
 int main(void)
 {
 	// PLL and MAM
-	Initialize();
+	HalSysInit();
 
 	// init DBG
 	ConsoleInit(60000000 / (16 * BAUD_RATE));

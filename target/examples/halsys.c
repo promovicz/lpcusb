@@ -35,7 +35,11 @@
                   Header files
  **********************************************************/
 
-#include "startup.h"
+#include "type.h"
+#include "debug.h"
+
+#include "hal.h"
+
 #ifdef LPC214x
 #include "lpc214x.h"
 #endif
@@ -71,10 +75,6 @@ void UNDEF_Routine (void) {
 }
 
 
-/**********************************************************
-                      Initialize
-**********************************************************/
-
 #ifdef LPC214x
 #define PLOCK 0x400
 #endif
@@ -90,7 +90,7 @@ static void feed(void)
 }
 
 
-void Initialize(void)  
+void HalSysInit(void)  
 {
 	
  
@@ -130,24 +130,23 @@ void Initialize(void)
 	//
    
 #ifdef LPC23xx
+	SCS |= 1;
+	PINSEL10 = 0;
+	FIO2DIR |= 0x00FF; // Enable LED output on the KEIL MCB2300 board
+	FIO2CLR |= 0xFF; // Turn off all LEDs
 
-  SCS |= 1;
-  PINSEL10 = 0;
-  FIO2DIR |= 0x00FF; // Enable LED output on the KEIL MCB2300 board
-  FIO2CLR |= 0xFF; // Turn off all LEDs
+	// Select the CPU clock divider
+	CCLKCFG = 0x03;
 
-  // Select the CPU clock divider
-  CCLKCFG = 0x03;
+	/* Start main oscillator */
+	SCS |= (1 << 5);
 
-  /* Start main oscillator */
-  SCS |= (1 << 5);
+	while(!(SCS & (1<<6)));
 
-  while(!(SCS & (1<<6)));
-
-  CLKSRCSEL = 1;
+	CLKSRCSEL = 1;
 
 	// Setting Multiplier and Divider values
- 	PLLCFG = (0 << 16) | (5 << 0);
+	PLLCFG = (0 << 16) | (5 << 0);
 #else
 	// Setting Multiplier and Divider values
   	PLLCFG = 0x24;
@@ -180,5 +179,41 @@ void Initialize(void)
 	// Setting peripheral Clock (pclk) to System Clock (cclk)
 	VPBDIV = 0x1;
 #endif
+}
+
+
+void HalSysPinSelect(U8 bPin, U8 bFunc)
+{
+	if (bPin < 16) {
+		PINSEL0 = (PINSEL0 & ~(3 << (2 * bPin))) | (bFunc << (2 * bPin));
+	}
+	else {
+		bPin -= 16;
+		PINSEL1 = (PINSEL1 & ~(3 << (2 * bPin))) | (bFunc << (2 * bPin));
+	}
+}
+
+
+int HalSysGetCCLK(void)
+{
+	return 60000000;
+}
+
+
+int HalSysGetPCLK(void)
+{
+	return 60000000;
+}
+
+
+void HalPinSelect(U8 bPin, U8 bFunc)
+{
+	if (bPin < 16) {
+		PINSEL0 = (PINSEL0 & ~(3 << (2 * bPin))) | (bFunc << (2 * bPin));
+	}
+	else {
+		bPin -= 16;
+		PINSEL1 = (PINSEL1 & ~(3 << (2 * bPin))) | (bFunc << (2 * bPin));
+	}
 }
 

@@ -40,9 +40,9 @@
 #include "type.h"
 #include "debug.h"
 
+#include "hal.h"
 #include "console.h"
 #include "usbapi.h"
-#include "startup.h"
 
 
 #define BULK_IN_EP		0x82
@@ -238,7 +238,7 @@ static BOOL HandleVendorRequest(TSetupPacket *pSetup, int *piLen, U8 **ppbData)
 int main(void)
 {
 	// PLL and MAM
-	Initialize();
+	HalSysInit();
 
 #ifdef LPC214x
 	// init DBG
