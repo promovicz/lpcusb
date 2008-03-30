@@ -35,6 +35,7 @@
 #ifndef _TYPE_H_
 #define _TYPE_H_
 
+typedef unsigned char		BYTE;	/**< unsigned 8-bit */
 typedef unsigned char		U8;		/**< unsigned 8-bit */
 typedef unsigned short int	U16;	/**< unsigned 16-bit */
 typedef unsigned int		U32;	/**< unsigned 32-bit */
