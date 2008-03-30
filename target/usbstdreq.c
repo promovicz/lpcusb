@@ -44,7 +44,8 @@
 */
 
 #include "type.h"
-#include "usbdebug.h"
+#include "debug.h"
+
 #include "usbstruct.h"
 #include "usbapi.h"
 #include "usbhw_lpc.h"

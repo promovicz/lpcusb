@@ -38,7 +38,7 @@
 */
 
 #include "type.h"
-#include "usbdebug.h"
+#include "debug.h"
 
 #include "console.h"
 #include "usbapi.h"

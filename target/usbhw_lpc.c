@@ -31,7 +31,8 @@
  */
 
 #include "type.h"
-#include "usbdebug.h"
+#include "debug.h"
+
 #ifdef LPC214x
 #include "lpc214x.h"
 #endif

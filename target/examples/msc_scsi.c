@@ -41,7 +41,7 @@
 #include <string.h>		// memcpy
 
 #include "type.h"
-#include "usbdebug.h"
+#include "debug.h"
 
 #include "blockdev.h"
 #include "msc_scsi.h"

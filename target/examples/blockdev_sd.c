@@ -27,8 +27,7 @@
 
 
 #include "type.h"
-#include "usbdebug.h"
-
+#include "debug.h"
 
 #include "blockdev.h"
 #include "spi.h"

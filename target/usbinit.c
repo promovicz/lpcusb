@@ -31,7 +31,7 @@
  */
 
 #include "type.h"
-#include "usbdebug.h"
+#include "debug.h"
 
 #include "usbhw_lpc.h"
 #include "usbapi.h"

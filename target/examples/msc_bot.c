@@ -36,7 +36,8 @@
 #include <string.h>
 
 #include "type.h"
-#include "usbdebug.h"
+#include "debug.h"
+
 #include "usbapi.h"
 
 #include "msc_bot.h"
