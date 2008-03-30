@@ -53,12 +53,22 @@
 #define U0LCR		*(volatile unsigned int *)0xE000C00C
 #define U0LSR		*(volatile unsigned int *)0xE000C014
 
+/* SPI0 (Serial Peripheral Interface 0) */
+#define S0SPCR			*(volatile unsigned int *)0xE0020000
+#define S0SPSR			*(volatile unsigned int *)0xE0020004
+#define S0SPDR			*(volatile unsigned int *)0xE0020008
+#define S0SPCCR			*(volatile unsigned int *)0xE002000C
+#define S0SPTCR			*(volatile unsigned int *)0xE0020010
+#define S0SPTSR			*(volatile unsigned int *)0xE0020014
+#define S0SPTOR			*(volatile unsigned int *)0xE0020018
+#define S0SPINT			*(volatile unsigned int *)0xE002001C
+
 // interrupts
-#define VICIntSelect   *((volatile unsigned int *) 0xFFFFF00C)
-#define VICIntEnable   *((volatile unsigned int *) 0xFFFFF010)
-#define VICVectAddr    *((volatile unsigned int *) 0xFFFFF030)
-#define VICVectAddr0   *((volatile unsigned int *) 0xFFFFF100)
-#define VICVectCntl0   *((volatile unsigned int *) 0xFFFFF200)
+#define VICIntSelect	*(volatile unsigned int *)0xFFFFF00C
+#define VICIntEnable	*(volatile unsigned int *)0xFFFFF010
+#define VICVectAddr		*(volatile unsigned int *)0xFFFFF030
+#define VICVectAddr0	*(volatile unsigned int *)0xFFFFF100
+#define VICVectCntl0	*(volatile unsigned int *)0xFFFFF200
 
 /* Common LPC2148 definitions, related to USB */
 #define	PCONP			*(volatile unsigned int *)0xE01FC0C4
@@ -69,10 +79,30 @@
 
 #define PINSEL0			*(volatile unsigned int *)0xE002C000
 #define PINSEL1			*(volatile unsigned int *)0xE002C004
+#define PINSEL2			*(volatile unsigned int *)0xE002C014
 #define IOPIN0			*(volatile unsigned int *)0xE0028000
 #define IOSET0			*(volatile unsigned int *)0xE0028004
 #define IODIR0			*(volatile unsigned int *)0xE0028008
 #define IOCLR0			*(volatile unsigned int *)0xE002800C
+#define IOPIN1			*(volatile unsigned int *)0xE0028010
+#define IOSET1			*(volatile unsigned int *)0xE0028014
+#define IODIR1			*(volatile unsigned int *)0xE0028018
+#define IOCLR1			*(volatile unsigned int *)0xE002801C
+
+/* PCONP bits */
+#define PCTIM0		(1<<1)
+#define PCTIM1		(1<<2)
+#define PCUART0		(1<<3)
+#define PCUART1		(1<<4)
+#define PCPWM0		(1<<5)
+#define PCI2C0		(1<<7)
+#define PCSPI0		(1<<8)
+#define PCRTC		(1<<9)
+#define PCSPI1		(1<<10)
+#define PCAD0		(1<<12)
+#define PCI2C1		(1<<19)
+#define PCAD1		(1<<20)
+#define PCUSB		(1<<31)
 
 /* USB register definitions */
 #define USBIntSt		*(volatile unsigned int *)0xE01FC1C0
