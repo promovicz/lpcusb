@@ -24,8 +24,6 @@
 	2006, Bertrik Sikken, modified for LPCUSB
 */
 
-
-/*****************************************************************************/
 #include "type.h"
 #include "debug.h"
 
@@ -37,25 +35,17 @@
 
 
 // SP0SPCR  Bit-Definitions
-#define CPHA    3
-#define CPOL    4
-#define MSTR    5
+#define CPHA    (1<<3)
+#define CPOL    (1<<4)
+#define MSTR    (1<<5)
 // SP0SPSR  Bit-Definitions
-#define SPIF	7
+#define SPIF	(1<<7)
 
 #define SPI_IODIR      IODIR0
 #define SPI_SCK_PIN    4		/* Clock       P0.4  out */
 #define SPI_MISO_PIN   5		/* from Card   P0.5  in  */
 #define SPI_MOSI_PIN   6		/* to Card     P0.6  out */
 #define SPI_SS_PIN	   22		/* Card-Select P0.7 - GPIO out */
-
-#define SPI_PINSEL     PINSEL0
-#define SPI_SCK_FUNCBIT   8
-#define SPI_MISO_FUNCBIT  10
-#define SPI_MOSI_FUNCBIT  12
-#define SPI_SS_FUNCBIT    44
-
-#define SPI_PRESCALE_REG  S0SPCCR
 
 #define SELECT_CARD()   IOCLR0 = (1 << SPI_SS_PIN)
 #define UNSELECT_CARD() IOSET0 = (1 << SPI_SS_PIN)
@@ -98,7 +88,7 @@ void SPIInit(void)
 	HalPinSelect(SPI_SS_PIN,	0);	// GPIO
 
 	// enable SPI-Master
-	S0SPCR = (1 << MSTR) | (0 << CPOL);
+	S0SPCR = MSTR | CPOL;
 }
 
 /*****************************************************************************/
@@ -117,7 +107,7 @@ void SPITransfer(int iCount, U8 *pbTxData, U8 *pbRxData)
 			S0SPDR = SPI_IDLE_CHAR;
 		}
 		// wait until done
-		while( !(S0SPSR & (1<<SPIF)) ) ;
+		while( !(S0SPSR & SPIF) ) ;
 		// store received byte
 		if (pbRxData != NULL) {
 			*pbRxData++ = S0SPDR;
@@ -134,7 +124,7 @@ void SPITick(int iCount)
 	UNSELECT_CARD();
 	for (i = 0; i < iCount; i++) {
 		S0SPDR = SPI_IDLE_CHAR;
-		while (!(S0SPSR & (1 << SPIF)));
+		while (!(S0SPSR & SPIF));
 	}
 }
 
