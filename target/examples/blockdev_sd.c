@@ -104,7 +104,7 @@ static void Resp8bError(U8 value)
  calculates size of card from CSD 
  (extension by Martin Thomas, inspired by code from Holger Klabunde)
  */
-int BlockDevGetSize(U32 *pdwDriveSize)
+BOOL BlockDevGetSize(U32 *pdwDriveSize)
 {
 	U8 cardresp, i, by;
 	U8 iob[16];
@@ -141,7 +141,7 @@ int BlockDevGetSize(U32 *pdwDriveSize)
 
 	*pdwDriveSize = (U32) (c_size + 1) * (U32) c_size_mult *(U32) read_bl_len;
 
-	return 0;
+	return TRUE;
 }
 
 
@@ -192,7 +192,7 @@ static int State(void)
 /*****************************************************************************/
 
 
-int BlockDevInit(void)
+BOOL BlockDevInit(void)
 {
 	int i;
 	U8 resp;
@@ -209,12 +209,12 @@ int BlockDevInit(void)
 	if (resp != 1) {
 		if (resp == 0xff) {
 			DBG("resp=0xff\n");
-			return -1;
+			return FALSE;
 		}
 		else {
 			Resp8bError(resp);
 			DBG("resp!=0xff\n");
-			return -2;
+			return FALSE;
 		}
 	}
 
@@ -232,7 +232,7 @@ int BlockDevInit(void)
 
 	if (resp != 0) {
 		Resp8bError(resp);
-		return -3;
+		return FALSE;
 	}
 
 	/* increase speed after init */
@@ -240,7 +240,7 @@ int BlockDevInit(void)
 
 	if (State() < 0) {
 		DBG("Card didn't return the ready state, breaking up...\n");
-		return -2;
+		return FALSE;
 	}
 
 	DBG("Init done...\n");
@@ -270,7 +270,7 @@ int BlockDevInit(void)
  * BUSY...
  */
 
-int BlockDevWrite(U32 dwAddress, U8 * pbBuf)
+BOOL BlockDevWrite(U32 dwAddress, U8 * pbBuf)
 {
 	U32 place;
 	U16 t = 0;
@@ -291,7 +291,7 @@ int BlockDevWrite(U32 dwAddress, U8 * pbBuf)
 		t++;
 	}
 
-	return 0;
+	return TRUE;
 }
 
 /*****************************************************************************/
@@ -308,7 +308,7 @@ int BlockDevWrite(U32 dwAddress, U8 * pbBuf)
  * 		CHKS (2B)
  */
 
-int BlockDevRead(U32 dwAddress, U8 * pbBuf)
+BOOL BlockDevRead(U32 dwAddress, U8 * pbBuf)
 {
 	U8 cardresp;
 	U8 firstblock;
@@ -327,7 +327,7 @@ int BlockDevRead(U32 dwAddress, U8 * pbBuf)
 
 	if (cardresp != 0x00 || firstblock != 0xfe) {
 		Resp8bError(firstblock);
-		return -1;
+		return FALSE;
 	}
 
 	SPIRecvN(pbBuf, 512);
@@ -336,7 +336,7 @@ int BlockDevRead(U32 dwAddress, U8 * pbBuf)
 	SPISend(0xff);
 	SPISend(0xff);
 
-	return 0;
+	return TRUE;
 }
 
 /*****************************************************************************/
