@@ -53,6 +53,7 @@
 #define CMD_GO_IDLE_STATE			0			
 #define CMD_SEND_OP_COND			1
 #define CMD_SWITCH_FUNC				6
+#define CMD_SEND_IF_COND			8
 #define CMD_SEND_CSD				9
 #define CMD_SEND_CID				10
 #define CMD_STOP_TRANSMISSION		12
@@ -69,6 +70,7 @@
 #define CMD_ERASE_WR_BLK_START_ADDR	32
 #define CMD_ERASE_WR_BLK_END_ADDR	33
 #define CMD_ERASE					38
+#define CMD_SD_SEND_OP_COND			41
 #define CMD_LOCK_UNLOCK				42
 #define CMD_APP_CMD					55	
 #define CMD_GEN_CMD					56
@@ -80,6 +82,8 @@
 #define TOKEN_STOP_TRAN				0xFD
 #define TOKEN_START_BLOCK			0xFE
 
+#define OCR_HCS						(1<<30)
+
 
 #define SD_BLOCK_SIZE				512
 
@@ -87,6 +91,16 @@
 #define	NCR			8
 #define NAC			1024		// actually much more complex, TODO
 #define NWR			1			// (bytes) time between write response and data block
+
+
+typedef enum {
+	eCardUnknown,
+	eCardSDV1,
+	eCardSDV2,
+	eCardSDV2HC
+} ECardType;
+
+static ECardType eCardType;
 
 
 // returns an R1 error code
@@ -105,6 +119,22 @@ static U8 SDWaitResp(int iTimeout)
 	return bResp;
 }
 
+// return extra response data
+static U32 SDExtraResp(int iLen)
+{
+	U8	abResp[4];
+	U32	ulResp;
+	int i;
+
+	ASSERT(iLen <= 4);
+
+	SPITransfer(iLen, NULL, abResp);
+	ulResp = 0;
+	for (i = 0; i < iLen; i++) {
+		ulResp = (ulResp << 8) | abResp[i];
+	}
+	return ulResp;
+}
 
 // returns an R1 error code
 static U8 SDCommand(U8 bCmd, U32 ulParam)
@@ -125,11 +155,29 @@ static U8 SDCommand(U8 bCmd, U32 ulParam)
 	abBuf[2] = ulParam >> 16;
 	abBuf[3] = ulParam >> 8;
 	abBuf[4] = ulParam >> 0;
-	abBuf[5] = 0x95;
+	abBuf[5] = (bCmd == CMD_SEND_IF_COND) ? 0x87 : 0x95;
 	SPITransfer(6, abBuf, NULL);
 	
 	// wait for response
 	return SDWaitResp(NCR);
+}
+
+// wait for card to initialise
+static BOOL SDSendOpCond(U32 ulOpCond)
+{
+	int i;
+	U8	bResp;
+	
+	// send ACMD41 until ready
+	for (i = 0; i < 1024; i++) {
+		bResp = SDCommand(CMD_APP_CMD, 0);
+		bResp = SDCommand(CMD_SD_SEND_OP_COND, ulOpCond);
+		if (bResp == 0) {
+			return TRUE;
+		}
+	}
+	DBG("CMD_SEND_OP_COND failed\n");
+	return FALSE;
 }
 
 
@@ -154,7 +202,7 @@ static BOOL SDReadDataToken(U8 bType, U8 *pbData, int iLen)
 }
 
 
-static BOOL SDWriteDataToken(U8 bType, U8 *pbData, int iLen)
+static BOOL SDWriteDataToken(U8 bType, const U8 *pbData, int iLen)
 {
 	U8	bResp;
 
@@ -189,6 +237,10 @@ BOOL SDInit(void)
 {
 	int i;
 	U8	bResp;
+	U32	ulOCR;
+	U32 ulData;
+
+	eCardType = eCardUnknown;
 
 	// init SPI subsystem
 	SPIInit();
@@ -211,16 +263,35 @@ BOOL SDInit(void)
 		return FALSE;
 	}
 	
-	// send CMD_SEND_OP_COND
-	for (i = 0; i < 1024; i++) {
-		bResp = SDCommand(CMD_SEND_OP_COND, 0);
-		if (bResp == 0) {
-			break;
+	// send CMD8
+	bResp = SDCommand(CMD_SEND_IF_COND, 0x1AA);
+	if (bResp == 1) {
+		// Ver2.00 or later SD memory card
+		ulData = SDExtraResp(4);
+		if (ulData != 0x1AA) {
+			DBG("CMD8 data 0x%08X\n", ulData);
+			return FALSE;
 		}
+
+		if (!SDSendOpCond(OCR_HCS)) {
+			DBG("SDSendOpCond failed!\n");
+			return FALSE;
+		}
+		
+		// Check CCS bit
+		if (!SDReadOCR(&ulOCR)) {
+			DBG("ReadOCR failed!\n");
+			return FALSE;
+		}
+		eCardType = ((ulOCR & OCR_HCS) != 0) ? eCardSDV2HC : eCardSDV2;
 	}
-	if (bResp != 0) {
-		DBG("CMD_SEND_OP_COND failed (0x%02X)!\n", bResp);
+	else {
+		// Ver1.X SD memory card or other
+		if (!SDSendOpCond(0)) {
+			DBG("SDSendOpCond failed!\n");
 		return FALSE;
+	}
+		eCardType = eCardSDV1;
 	}
 	
 	// set high SPI speed
@@ -230,12 +301,19 @@ BOOL SDInit(void)
 }
 
 
+static U32 SDBlock2Addr(U32 ulBlock)
+{
+	return (eCardType == eCardSDV2HC) ? ulBlock : ulBlock * SD_BLOCK_SIZE;
+}
+
+
 BOOL SDReadBlock(U8 *pbData, U32 ulBlock)
 {
 	U32	ulAddr;
 	U8	bResp;
 	
-	ulAddr = ulBlock * SD_BLOCK_SIZE;
+	// calculate card address
+	ulAddr = SDBlock2Addr(ulBlock);
 	
 	// write command
 	if ((bResp = SDCommand(CMD_READ_SINGLE_BLOCK, ulAddr)) != 0) {
@@ -254,12 +332,13 @@ BOOL SDReadBlock(U8 *pbData, U32 ulBlock)
 
 
 
-BOOL SDWriteBlock(U8 *pbData, U32 ulBlock)
+BOOL SDWriteBlock(const U8 *pbData, U32 ulBlock)
 {
 	U32	ulAddr;
 	U8	bResp;
 	
-	ulAddr = ulBlock * SD_BLOCK_SIZE;
+	// calculate card address
+	ulAddr = SDBlock2Addr(ulBlock);
 	
 	// write command
 	if ((bResp = SDCommand(CMD_WRITE_BLOCK, ulAddr)) != 0) {
@@ -316,3 +395,18 @@ BOOL SDReadCID(U8 *pbCID)
 	return TRUE;
 }
 	
+
+BOOL SDReadOCR(U32 *pulOCR)
+{
+	U8	bResp;
+
+	// write command
+	if ((bResp = SDCommand(CMD_READ_OCR, 0)) != 0) {
+		DBG("CMD_READ_OCR failed (0x%02X)!\n", bResp);
+		return FALSE;
+	}
+	*pulOCR = SDExtraResp(4);
+	return TRUE;
+}
+
+

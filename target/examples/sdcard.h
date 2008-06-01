@@ -30,7 +30,8 @@
 BOOL SDInit(void);
 BOOL SDReadCSD(U8 *pbCSD);
 BOOL SDReadCID(U8 *pbCID);
+BOOL SDReadOCR(U32 *pulOCR);
 
 BOOL SDReadBlock(U8 *pbData, U32 ulBlock);
-BOOL SDWriteBlock(U8 *pbData, U32 ulBlock);
+BOOL SDWriteBlock(const U8 *pbData, U32 ulBlock);
 

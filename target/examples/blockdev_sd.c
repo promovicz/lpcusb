@@ -23,7 +23,7 @@
 	THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 	(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 	THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ */
 
 #include "type.h"
 #include "debug.h"
@@ -80,16 +80,26 @@ BOOL BlockDevGetSize(U32 *pdwDriveSize)
 		return FALSE;
 	}
 	csd_structure =	getsdbits(abBuf, 127, 2);
-	if (csd_structure != 0) {
+	switch (csd_structure) {
+	
+	case 0:
+		read_bl_len =	getsdbits(abBuf, 83, 4);
+		c_size =		getsdbits(abBuf, 73, 12);
+		c_size_mult =	getsdbits(abBuf, 49, 3);
+		num_blocks = (c_size + 1) * (4 << c_size_mult);
+		block_size = 1 << read_bl_len;
+		break;
+
+	case 1:
+		c_size =		getsdbits(abBuf, 69, 22);
+		num_blocks = (c_size + 1) * 512 * 1024;
+		block_size = 512;
+		break;
+		
+	default:
 		DBG("Invalid CSD structure (%d)!\n", csd_structure);
 		return FALSE;
 	}
-	read_bl_len =	getsdbits(abBuf, 83, 4);
-	c_size =		getsdbits(abBuf, 73, 12);
-	c_size_mult =	getsdbits(abBuf, 49, 3);
-
-	num_blocks = (c_size + 1) << (c_size_mult + 2);
-	block_size = 1 << read_bl_len;
 
 	*pdwDriveSize = num_blocks * block_size;
 	return TRUE;
