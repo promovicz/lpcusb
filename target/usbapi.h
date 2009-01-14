@@ -72,6 +72,7 @@ void USBHwConnect		(BOOL fConnect);
 int  USBHwEPRead		(U8 bEP, U8 *pbBuf, int iMaxLen);
 int	 USBHwEPWrite		(U8 bEP, U8 *pbBuf, int iLen);
 void USBHwEPStall		(U8 bEP, BOOL fStall);
+int  USBHwISOCEPRead    (const U8 bEP, U8 *pbBuf, const int iMaxLen);
 
 /** Endpoint interrupt handler callback */
 typedef void (TFnEPIntHandler)	(U8 bEP, U8 bEPStatus);
@@ -110,3 +111,28 @@ void USBHandleControlTransfer(U8 bEP, U8 bEPStat);
 /** Descriptor handling */
 void USBRegisterDescriptors(const U8 *pabDescriptors);
 BOOL USBGetDescriptor(U16 wTypeIndex, U16 wLangID, int *piLen, U8 **ppbData);
+
+
+
+
+/** DMA descriptor setup */
+void USBSetupDMADescriptor(
+		volatile U32 dmaDescriptor[], 
+		volatile U32 nextDdPtr[],
+		const U8 isIsocFlag, 
+		const U16 maxPacketSize, 
+		const U16 dmaLengthIsocNumFrames,
+		void *dmaBufferStartAddress,
+		U32 *isocPacketSizeMemoryAddress );
+
+void USBInitializeISOCFrameArray(U32 isocFrameArr[], const U32 numElements, const U16 startFrameNumber, const U16 defaultFrameLength);
+void USBInitializeUSBDMA(volatile U32* udcaHeadArray[32]);
+void USBSetHeadDDForDMA(const U8 bEp, volatile U32* udcaHeadArray[32], volatile const U32 *dmaDescriptorPtr);
+
+void USBEnableDMAForEndpoint(const U8 bEndpointNumber) ;
+void USBDisableDMAForEndpoint(const U8 bEndpointNumber);
+
+
+
+
+

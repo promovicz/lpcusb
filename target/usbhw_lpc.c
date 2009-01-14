@@ -427,6 +427,62 @@ int USBHwEPRead(U8 bEP, U8 *pbBuf, int iMaxLen)
 }
 
 
+
+
+int USBHwISOCEPRead(const U8 bEP, U8 *pbBuf, const int iMaxLen)
+{
+    int i, idx,q;
+    U32 dwData, dwLen;
+
+    idx = EP2IDX(bEP);
+
+    // set read enable bit for specific endpoint
+    USBCtrl = RD_EN | ((bEP & 0xF) << 2);
+    
+    //Note: for some reason the USB perepherial needs a cycle to set bits in USBRxPLen before 
+    //reading, if you remove this ISOC wont work. This may be a but in the chip, or due to 
+    //a mis-understanding of how the perepherial is supposed to work.    
+    asm volatile("nop\n"); 
+
+    
+    dwLen = USBRxPLen;
+    if( (dwLen & PKT_RDY) == 0 ) {
+        USBCtrl = 0;// make sure RD_EN is clear
+        return(-1);
+    }
+
+    // packet valid?
+    if ((dwLen & DV) == 0) {
+        USBCtrl = 0;// make sure RD_EN is clear
+        return -1;
+    }
+
+    // get length
+    dwLen &= PKT_LNGTH_MASK;
+
+    // get data
+    dwData = 0;
+    for (i = 0; i < dwLen; i++) {
+        if ((i % 4) == 0) {
+            dwData = USBRxData;
+        }
+        if ((pbBuf != NULL) && (i < iMaxLen)) {
+            pbBuf[i] = dwData & 0xFF;
+        }
+        dwData >>= 8;
+    }
+
+    // make sure RD_EN is clear
+    USBCtrl = 0;
+
+    // select endpoint and clear buffer
+    USBHwCmd(CMD_EP_SELECT | idx);
+    USBHwCmd(CMD_EP_CLEAR_BUFFER);
+
+    return dwLen;
+}
+
+
 /**
     Sets the 'configured' state.
         
@@ -628,4 +684,134 @@ BOOL USBHwInit(void)
 
     return TRUE;
 }
+
+
+
+
+
+
+
+/**
+    This function is used to setup and populated the various elements of a LPC2148 DMA desccriptor such that
+    after calling this function, the DMA descriptor could be used as part of a DMA tranfer.
+    
+        
+    @param [in] dmaDescriptor    A pointer to a 4 or 5 element long array of U32's that the DMA descriptor data is to be stored into, it should point to some place in DMA RAM.
+    @param [in] nextDdPtr        The value to be placed in the "Next_DD_Pointer" value of the DMA desriptor, set to NULL if there is no next-pointer.
+    @param [in] isIsocFlag       Flag to indicate if this DMA descriptor is for an ISOC endpoint (with a 5 element dmaDescriptor array pointer), 1 indicates ISOC, 0 indicates non-ISOC. 
+    @param [in] maxPacketSize    The maximum packet size that can be sent/received for the endpoint in question.
+    @param [in] dmaLengthIsocNumFrames    For non-ISOC endpoints, the number of bytes in the buffer to be transfered, for ISOC endpoints, the number of frames to be transfered.
+    @param [in] dmaBufferStartAddress    Start address for the dma transfer (location to store data for an OUT endpoint, location to pull data from for an IN endpoint), it should point to some place in DMA RAM.
+    @param [in] isocPacketSizeMemoryAddress   If a non-ISOC endpoint, set this to NULL, if an ISOC endpoint, then set this to a pointer to an array of U32's that represent how
+
+    @return  void
+ */
+void USBSetupDMADescriptor(
+		volatile U32 dmaDescriptor[], 
+		volatile U32 nextDdPtr[],
+		const U8 isIsocFlag, 
+		const U16 maxPacketSize, 
+		const U16 dmaLengthIsocNumFrames,
+		void *dmaBufferStartAddress,
+		U32 *isocPacketSizeMemoryAddress ) 
+{
+	dmaDescriptor[1] = 0;
+	dmaDescriptor[0] = (U32) nextDdPtr;
+	dmaDescriptor[1] |= ((maxPacketSize & 0x3FF) << 5);//Set maxPacketSize
+	dmaDescriptor[1] |= (dmaLengthIsocNumFrames << 16);//aka number of ISOC packets if in ISOC mode
+	if( isIsocFlag ) {
+		dmaDescriptor[1] |= (1<<4);//enable isoc type
+	}
+	if( nextDdPtr != NULL ) {
+		dmaDescriptor[1] |= (1<<2); //mark next DD as valid
+	}
+	dmaDescriptor[2] = (U32) dmaBufferStartAddress;
+	
+	if( isIsocFlag && isocPacketSizeMemoryAddress != NULL ) {
+		dmaDescriptor[4] = (U32) isocPacketSizeMemoryAddress;
+	}
+	dmaDescriptor[3] = 0; //mark DD as valid and reset all status bits
+}
+
+/**
+    This function disables DMA for the endpoint indicated by the paramater.
+        
+    @param [in] bEndpointNumber the endpoint number to be disabled.
+
+    @return   void
+ */
+void USBDisableDMAForEndpoint(const U8 bEndpointNumber) {
+	int idx = EP2IDX(bEndpointNumber);
+	USBEpDMADis = (1<<idx);
+}
+
+/**
+    Enables DMA for a particular endpoint.
+        
+    @param [in] bEndpontNumber The endpoint to to enable DMA for.
+
+    @return 
+ */
+void USBEnableDMAForEndpoint(const U8 bEndpointNumber) {
+	int idx = EP2IDX(bEndpointNumber);
+	USBEpDMAEn = (1<<idx);
+}
+
+/**
+    This function is used to initialized an ISOC frame array
+        
+    @param [in|out] isocFrameArr        The array of ISOC frame descriptors to be set, it should point to some place in DMA RAM.
+    @param [in] numElements             The number of elements in the isocFrameArr array.
+    @param [in] startFrameNumber        Number to start at for numbering each frame.
+    @param [in] defaultFrameLength      The frame length to set all the frame descriptors to.
+
+    @return  void
+ */
+void USBInitializeISOCFrameArray(U32 isocFrameArr[], const U32 numElements, const U16 startFrameNumber, const U16 defaultFrameLength) {
+	U16 i;
+	U16 frameNumber = startFrameNumber;
+	
+	for(i = 0; i < numElements; i++ ) {
+		isocFrameArr[i] = (frameNumber<<16) | (1<<15) | (defaultFrameLength & 0x3FF);
+		frameNumber++;
+	}
+}
+
+/**
+    This function is used to set the DMA descriptor head for the linked list of a particular endpoint.
+        
+    @param [in] bEp                    The endpoint number to set the DMA linked list head for.
+    @param [in|out] udcaHeadArray      The array of pointers that point to the head DD elements for each endpoint, it should point to some place in DMA RAM.
+    @param [in|out] dmaDescriptorPtr   The address of the DMA descriptor that is to be the new head, it should point to some place in DMA RAM.
+
+    @return 
+ */
+void USBSetHeadDDForDMA(const U8 bEp, volatile U32* udcaHeadArray[32], volatile const U32 *dmaDescriptorPtr) {
+	udcaHeadArray[EP2IDX(bEp)] = (U32) dmaDescriptorPtr;
+}
+
+/**
+    This function is used to initialize the USB DMA controller
+        
+    @param [in|out] udcaHeadArray   This is a pointer to the array of DMA descriptor linked-list head pointers, it should point to some place in DMA RAM.
+
+    @return 
+ */
+void USBInitializeUSBDMA(volatile U32* udcaHeadArray[32]) {
+	//set following 32 pointers to be null
+	int i;
+	for(i = 0; i < 32; i++ ) {
+		udcaHeadArray[i] = NULL;
+	}
+	USBUDCAH = (U32) udcaHeadArray;
+}
+
+
+
+
+
+
+
+
+
 

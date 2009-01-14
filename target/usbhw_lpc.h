@@ -32,6 +32,8 @@
 	These are private to the usbhw module
 */
 
+
+
 /* USBIntSt bits */
 #define USB_INT_REQ_LP				(1<<0)
 #define USB_INT_REQ_HP				(1<<1)
