@@ -175,7 +175,11 @@ SECTIONS
 	} >flash							/* put all the above into FLASH */
 	
 
-	
+	.usbdma :
+     {
+        *(.usbdma)
+        . = ALIGN(4);
+     } >ram_usb_dma
 
 	.data :								/* collect all initialized .data sections that go into RAM  */ 
 	{

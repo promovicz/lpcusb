@@ -28,7 +28,7 @@
 /*
 
 This is a sample piece of code, tested on an Olimex 2148 developement board, to demonstrate
-the implimentation of a non-dma version of a pair of ISOC endpoints (one for IN and one for OUT).
+the implimentation of a DMA version of a pair of ISOC endpoints (one for IN and one for OUT).
 
 This implimentation will allow the host to turn on and off an LED on the olimex board, and will send
 an incrementing number to the host on each isoc IN request.
@@ -70,12 +70,30 @@ second, as well as receive the incrementing output counter.
 #define LE_WORD(x)		((x)&0xFF),((x)>>8)
 
 
-#define BYTES_PER_ISOC_FRAME 4
+#define NUM_ISOC_FRAMES 4
+#define BYTES_PER_ISOC_FRAME 128
+#define ISOC_INPUT_DATA_BUFFER_SIZE (BYTES_PER_ISOC_FRAME * NUM_ISOC_FRAMES)
+#define ISOC_OUTPUT_DATA_BUFFER_SIZE (BYTES_PER_ISOC_FRAME * NUM_ISOC_FRAMES)
 
-__attribute__ ((aligned(4))) U32 inputIsocDataBuffer[(BYTES_PER_ISOC_FRAME/4)];
 
-#define ISOC_OUTPUT_DATA_BUFFER_SIZE 1024
 volatile U8 outputIsocDataBuffer[ISOC_OUTPUT_DATA_BUFFER_SIZE];
+
+
+__attribute__ ((section (".usbdma"), aligned(4))) volatile U32* udcaHeadArray[32];
+__attribute__ ((section (".usbdma"), aligned(4))) volatile U32 inputDmaDescriptor[5];
+__attribute__ ((section (".usbdma"), aligned(4))) U32 inputIsocFrameArray[NUM_ISOC_FRAMES];
+__attribute__ ((section (".usbdma"), aligned(4))) U8 inputIsocDataBuffer[ISOC_INPUT_DATA_BUFFER_SIZE];
+
+
+__attribute__ ((section (".usbdma"), aligned(4))) volatile U32 outputDmaDescriptor[5];
+__attribute__ ((section (".usbdma"), aligned(128))) U32 outputIsocFrameArray[NUM_ISOC_FRAMES];
+__attribute__ ((section (".usbdma"), aligned(128))) volatile U8 outputIsocDataBuffer[ISOC_OUTPUT_DATA_BUFFER_SIZE];
+
+
+
+U16 commonIsocFrameNumber = 1;
+
+
 
 int isConnectedFlag = 0;
 
@@ -242,6 +260,42 @@ void USBIntHandler(void)
 	ISR_EXIT();
 }
 
+
+
+
+void resetDMATransfer(
+		const U8 endpointNumber,
+		volatile U32 *dmaDescriptor,
+		U32 *isocFrameArray,
+		const U32 numIsocFrames, 
+		const U32 bytesPerIsocFrame,
+		U16 *isocFrameNumber,
+		const U32 maxPacketSize,
+		void *dataBuffer
+		) 
+{
+	USBDisableDMAForEndpoint(endpointNumber);
+
+	USBInitializeISOCFrameArray(isocFrameArray, numIsocFrames, *isocFrameNumber, bytesPerIsocFrame);
+	*isocFrameNumber += numIsocFrames;
+
+	USBSetupDMADescriptor(dmaDescriptor, NULL, 1, maxPacketSize, numIsocFrames, dataBuffer, isocFrameArray);
+	
+	//set DDP pointer for endpoint so it knows where first DD is located, manual section 13.1
+	//set index of isoc DDP to point to start DD
+	USBSetHeadDDForDMA(endpointNumber, udcaHeadArray, dmaDescriptor);
+
+	USBEnableDMAForEndpoint(endpointNumber);
+}
+
+
+
+
+
+
+
+
+
 /**
 	USB frame interrupt handler
 	
@@ -255,6 +309,10 @@ void USBIntHandler(void)
  */
 
 int delay = 0;
+int didInputInit = 0;
+int resetCount = 0;
+int didOutputInit = 0;
+
 void USBFrameHandler(U16 wFrame)
 {
     // send over USB
@@ -264,25 +322,50 @@ void USBFrameHandler(U16 wFrame)
 			delay++;
 		} else {
 			
-			//Always write whatever is in our most recent isoc output data buffer, you may want to pust somthing interesting in there....
-			inputIsocDataBuffer[0]++;
-			USBHwEPWrite(ISOC_IN_EP, inputIsocDataBuffer, BYTES_PER_ISOC_FRAME);
+			//Check to see if the DMA descriptor is marked in the normal-completion status and ready for reset
+			int needToResetInputDMADescriptorFlag = (((inputDmaDescriptor[3] >> 1) & 0x0F ) == 2);
 			
-			int iLen = USBHwISOCEPRead(ISOC_OUT_EP, outputIsocDataBuffer, sizeof(outputIsocDataBuffer));
-			if (iLen > 0) {
-				//Insert your code to do somthing interesting here....
-				//DBG("z%d", b1);
-				
-				//The host sample code will send a byte indicating if the sample LED on olimex 2148 dev board should be on of off.
-				if( outputIsocDataBuffer[0] ) {
-					IOSET0 = (1<<10);//turn on led on olimex dev board
-
-				} else {
-					IOCLR0 = (1<<10);//turn off led on olimex dev board
-
+			if (needToResetInputDMADescriptorFlag || !didInputInit) {
+				//normal completion
+				if ( !didInputInit) {
+					didInputInit = 1;
 				}
 				
-			}			
+				//Always write whatever is in our most recent isoc output data buffer, you may want to pust somthing interesting in there....
+				inputIsocDataBuffer[0]++;
+				
+				resetDMATransfer(ISOC_IN_EP, inputDmaDescriptor, inputIsocFrameArray,
+								1, 4, &commonIsocFrameNumber, MAX_PACKET_SIZE, inputIsocDataBuffer);
+				
+			}
+			
+			
+			
+			
+			//Check to see if the DMA descriptor is marked in the normal-completion status and ready for reset
+			int needToResetOutputDMADescriptorFlag = (((outputDmaDescriptor[3] >> 1) & 0x0F ) == 2);
+				
+			if (needToResetOutputDMADescriptorFlag || !didOutputInit) {
+				//normal completion
+				if ( !didOutputInit) {
+					didOutputInit = 1;
+					
+				} else 
+					//The host sample code will send a byte indicating if the sample LED on olimex 2148 dev board should be on of off.
+					if( outputIsocDataBuffer[0] ) {//Note: were only inspecting the first of 4 isoc frames, this is just for the blinky light example
+						IOSET0 = (1<<10);//turn on led on olimex dev board
+	
+					} else {
+						IOCLR0 = (1<<10);//turn off led on olimex dev board
+	
+					}
+				}
+				
+				resetCount++;
+				resetDMATransfer(ISOC_OUT_EP, outputDmaDescriptor, outputIsocFrameArray,
+						NUM_ISOC_FRAMES, BYTES_PER_ISOC_FRAME, &commonIsocFrameNumber, MAX_PACKET_SIZE, outputIsocDataBuffer);
+			
+			}
 		}
 	}
 }
@@ -356,6 +439,9 @@ int main(void)
 	USBHwRegisterDevIntHandler(USBDevIntHandler);
 	
 	inputIsocDataBuffer[0] = 0;
+	
+	USBInitializeUSBDMA(udcaHeadArray);
+	USBEnableDMAForEndpoint(ISOC_IN_EP);
 	
 	DBG("Starting USB communication\n");
 
