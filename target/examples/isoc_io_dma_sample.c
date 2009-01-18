@@ -312,6 +312,7 @@ int delay = 0;
 int didInputInit = 0;
 int resetCount = 0;
 int didOutputInit = 0;
+unsigned int incrementingNumberCounter = 0;
 
 void USBFrameHandler(U16 wFrame)
 {
@@ -332,7 +333,8 @@ void USBFrameHandler(U16 wFrame)
 				}
 				
 				//Always write whatever is in our most recent isoc output data buffer, you may want to pust somthing interesting in there....
-				inputIsocDataBuffer[0]++;
+				incrementingNumberCounter++;
+				memcpy(inputIsocDataBuffer, &incrementingNumberCounter, sizeof(incrementingNumberCounter));
 				
 				resetDMATransfer(ISOC_IN_EP, inputDmaDescriptor, inputIsocFrameArray,
 								1, 4, &commonIsocFrameNumber, MAX_PACKET_SIZE, inputIsocDataBuffer);
@@ -350,7 +352,7 @@ void USBFrameHandler(U16 wFrame)
 				if ( !didOutputInit) {
 					didOutputInit = 1;
 					
-				} else 
+				} else { 
 					//The host sample code will send a byte indicating if the sample LED on olimex 2148 dev board should be on of off.
 					if( outputIsocDataBuffer[0] ) {//Note: were only inspecting the first of 4 isoc frames, this is just for the blinky light example
 						IOSET0 = (1<<10);//turn on led on olimex dev board
@@ -366,6 +368,7 @@ void USBFrameHandler(U16 wFrame)
 						NUM_ISOC_FRAMES, BYTES_PER_ISOC_FRAME, &commonIsocFrameNumber, MAX_PACKET_SIZE, outputIsocDataBuffer);
 			
 			}
+			
 		}
 	}
 }

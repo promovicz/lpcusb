@@ -9,6 +9,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <time.h>
+#include <stdint.h>
 
 /*
 This assumes the device on the USB bus is flashed with the isoc_io_sample.c from the examples directory.
