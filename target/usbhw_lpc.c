@@ -634,6 +634,7 @@ BOOL USBHwInit(void)
     PINSEL0 = (PINSEL0 & ~((3 << 26) | (3 << 28))) | (1 << 26);
     FIO0DIR |= (1<<14); /* Set pin to output */
     FIO0SET = (1<<14); /* Set output high to disconnect */
+    
 #else
     PINSEL1 = (PINSEL1 & ~((3 << 26) | (3 << 28))) | (1 << 26) | (1 << 28);
     PINSEL3 = (PINSEL3 & ~((3 << 4) | (3 << 28))) | (1 << 4) | (2 << 28);

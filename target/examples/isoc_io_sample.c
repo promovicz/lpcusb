@@ -275,10 +275,18 @@ void USBFrameHandler(U16 wFrame)
 				
 				//The host sample code will send a byte indicating if the sample LED on olimex 2148 dev board should be on of off.
 				if( outputIsocDataBuffer[0] ) {
+#ifdef LPC214x
 					IOSET0 = (1<<10);//turn on led on olimex dev board
-
+#else
+					FIO1SET = (1<<19);//turn off led on olimex 2378 Sdev board
+#endif
+					
 				} else {
+#ifdef LPC214x
 					IOCLR0 = (1<<10);//turn off led on olimex dev board
+#else
+					FIO1CLR = (1<<19);//turn off led on olimex 2378 Sdev board
+#endif
 
 				}
 				
@@ -320,9 +328,16 @@ static void USBDevIntHandler(U8 bDevStatus)
 	====
 **************************************************************************/
 int main(void)
-{	
+{
+	
+#ifdef LPC214x
 	IODIR0 |= (1<<10);//Debug LED on the olimex 2148 dev board set to output mode
 	IODIR0 |= (1<<11);//Debug LED on the olimex 2148 dev board set to output mode
+#else
+	SCS |= 1;//set Fast IO mode
+	FIO1DIR |= (1<<19);//Debug LED on the olimex 2378 dev board set to output mode 	
+	
+#endif	
 	
 	// PLL and MAM
 	HalSysInit();
@@ -332,7 +347,8 @@ int main(void)
 	ConsoleInit(60000000 / (16 * BAUD_RATE));
 #else
 	// init DBG
-	ConsoleInit(72000000 / (16 * BAUD_RATE));
+	ConsoleInit(48000000 / (16 * BAUD_RATE));
+	//ConsoleInit(72000000 / (16 * BAUD_RATE));
 #endif
 
 	DBG("Initialising USB stack\n");
@@ -363,8 +379,8 @@ int main(void)
 	(*(&VICVectCntl0+INT_VECT_NUM)) = 0x20 | 22; // choose highest priority ISR slot 	
 	(*(&VICVectAddr0+INT_VECT_NUM)) = (int)USBIntHandler;
 #else
-  VICVectCntl22 = 0x01;
-  VICVectAddr22 = (int)USBIntHandler;
+    VICVectCntl22 = 0x01;
+    VICVectAddr22 = (int)USBIntHandler;
 #endif
   
 	// set up USB interrupt
@@ -382,13 +398,33 @@ int main(void)
 	// echo any character received (do USB stuff in interrupt)
 	
 	for(;;) {
-		x++;
-		
-		if (x == interval) {
-			IOSET0 = (1<<11);//turn on led on olimex dev board
-		} else if (x >= (interval*2)) {
-			IOCLR0 = (1<<11);//turn off led on olimex dev board
-			x = 0;
+			x++;
+
+			if (x == interval) {
+#ifdef LPC214x
+				IOSET0 = (1<<11);
+				//turn on led on olimex dev board
+#else
+				/*
+				if( ! isConnectedFlag ) {
+					DBG("Not connected, blinking light...\n");
+					FIO1SET = (1<<19);//turn on led on olimex 2378 dev board
+				}
+				*/
+#endif
+			} else if (x >= (interval*2)) {
+#ifdef LPC214x
+				IOCLR0 = (1<<11); //turn off led on olimex dev board
+#else
+				/*
+				if( ! isConnectedFlag ) {
+					DBG("Not connected, blinking light...\n");
+					FIO1CLR = (1<<19);//turn off led on olimex 2378 Sdev board
+				}
+				*/
+#endif
+
+				x = 0;
 		}
 	}
 

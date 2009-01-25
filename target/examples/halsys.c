@@ -130,13 +130,16 @@ void HalSysInit(void)
 	//
    
 #ifdef LPC23xx
-	SCS |= 1;
+	SCS |= 1;//Set fast IO mode
 	PINSEL10 = 0;
 	FIO2DIR |= 0x00FF; // Enable LED output on the KEIL MCB2300 board
 	FIO2CLR |= 0xFF; // Turn off all LEDs
 
 	// Select the CPU clock divider
-	CCLKCFG = 0x03;
+	//CCLKCFG = 0x03;//Divide the CCO output frquency by (3 + 1)
+	
+	CCLKCFG = 0x05;//Divide the CCO output frquency by (5 + 1), 288mhz/6=48mhz
+	//CCLKCFG = 0x03;//Divide the CCO output frquency by (3 + 1), 288mhz/4=72mhz
 
 	/* Start main oscillator */
 	SCS |= (1 << 5);
@@ -146,7 +149,8 @@ void HalSysInit(void)
 	CLKSRCSEL = 1;
 
 	// Setting Multiplier and Divider values
-	PLLCFG = (0 << 16) | (5 << 0);
+	//PLLCFG = (0 << 16) | (5 << 0); //Divider = 1, multiplier = 0 (aka 0+1=1), frequency = 12mhz * 16 * 2/ 1 = 384mhz
+	PLLCFG = (0 << 16) | 11;//Mul=12, div=1, CCO at 288mhz 
 #else
 	// Setting Multiplier and Divider values
   	PLLCFG = 0x24;
@@ -174,7 +178,7 @@ void HalSysInit(void)
 	MAMCR = 0x2;
   
 #ifdef LPC23xx
-  PCLKSEL0 = (1 << 6); /* Set UART0 clock to cclk */
+    PCLKSEL0 = (1 << 6); /* Set UART0 clock to cclk */
 #else
 	// Setting peripheral Clock (pclk) to System Clock (cclk)
 	VPBDIV = 0x1;

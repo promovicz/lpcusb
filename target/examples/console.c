@@ -39,14 +39,16 @@
 #include "lpc23xx.h"
 #endif
 
+
 /* Initialize Serial Interface       */
 void ConsoleInit(int iDivider)  
 {               
 #ifdef LPC214x
 	PINSEL0 = (PINSEL0 & ~0x0000000F) | 0x00000005;	/* Enable RxD0 and TxD0              */
 #else
-  PINSEL0 = (PINSEL0 & ~0x000000F0) | 0x00000050;	/* Enable RxD0 and TxD0              */
+    PINSEL0 = (PINSEL0 & ~0x000000F0) | 0x00000050;	/* Enable RxD0 and TxD0              */
 #endif
+
 	U0LCR = 0x83;                          			/* 8 bits, no Parity, 1 Stop bit     */
 	U0DLL = iDivider & 0xFF;						/* set divider / baud rate */
 	U0DLM = iDivider >> 8;

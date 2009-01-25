@@ -4,7 +4,7 @@ LIBNAME	= usbstack
 TARGET = LPC214x
 #TARGET = LPC23xx
 
-# If you are using port B on the LPC2378 uncomment out the next line
+# If you are using port B on the LPC2378 uncomment out the next line (Used on the Olimex 2378 Dev Board)
 #LPC2378_PORT = -DLPC2378_PORTB
 
 # Package definitions

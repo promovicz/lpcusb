@@ -5,6 +5,7 @@ APPNAME = main
 TARGET=LPC214x
 #TARGET=LPC23xx
 
+
 # Tool definitions
 CC      = arm-elf-gcc
 LD      = arm-elf-ld -v
@@ -43,6 +44,7 @@ $(EXAMPLES):
 	$(CC) -T $(LINKFILE) $(LFLAGS) $^ -o $@.elf -Wl,-Map,$@.map
 	$(CP) $(CPFLAGS) $@.elf $@.hex
 	$(OD) $(ODFLAGS) $@.elf > $@.dmp
+	$(OD) -d $@.elf >$@.asm
 
 crt.o: crt.s
 	@ echo ".assembling"
