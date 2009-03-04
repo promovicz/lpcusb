@@ -1,6 +1,3 @@
-#include <usb.h>
-#include <linux/usbdevice_fs.h>
-#include <asm/byteorder.h>
 #include <stdio.h>
 #include <sys/ioctl.h>
 #include <string.h>
@@ -10,6 +7,10 @@
 #include <fcntl.h>
 #include <time.h>
 #include <stdint.h>
+#include <dirent.h>
+#include <stdlib.h>
+#include <linux/usbdevice_fs.h>
+
 
 /*
 This assumes the device on the USB bus is flashed with the isoc_io_sample.c from the examples directory.
