@@ -21,7 +21,7 @@ OD		= arm-elf-objdump
 RM		= rm
 TAR		= tar
 
-CFLAGS  = -I./ -I../ -c -W -Wall -Os -g -DDEBUG -D$(TARGET) $(LPC2378_PORT) -mcpu=arm7tdmi
+CFLAGS  = -I./ -I../ -c -W -Wall -Os -g -D$(TARGET) $(LPC2378_PORT) -mcpu=arm7tdmi -ffunction-sections
 ARFLAGS = -rcs
 
 LIBSRCS = usbhw_lpc.c usbcontrol.c usbstdreq.c usbinit.c
